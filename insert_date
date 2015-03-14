@@ -1,0 +1,25 @@
+#!/bin/bash
+if [ $# -lt 2 ]; then
+  echo "$(basename $0) <directory> <filespec>"
+  exit
+fi
+
+if [ -f $1 ]; then
+  echo ERROR: $1 is a filename
+  echo please give a directory
+  exit
+fi
+
+TGTDIR=$1
+shift
+mkdir -p $TGTDIR
+
+while [ $# -ne 0 ]; do
+  # DATE="$(stat -c "%y" $1|cut -b 12-15)0"
+  DATE="$(stat -c '%y' $1 | perl -p -e 's/(\d+)-(\d+)-(\d+) (\d{2}):(\d).*$/\3.\2.\1 \4:\5\x30/')"
+  echo processing $1 with $DATE
+  convert $1 -font Envy-Code-R-Regular -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 "$DATE" $TGTDIR/$1
+  touch -f $1 $TGTDIR/$1
+  rm $1
+  shift
+done

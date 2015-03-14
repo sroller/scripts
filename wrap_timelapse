@@ -1,0 +1,16 @@
+#!/bin/bash
+
+INPUT_DIR=~/timelapse/last
+OUTPUT_DIR=exif
+
+if [ -d $INPUT_DIR ]; then
+  cd $INPUT_DIR
+  insert_exif $OUTPUT_DIR tl*.jpg
+  cd $OUTPUT_DIR
+  create_movie
+  mv *.mp4 ~/movies
+  cd ~/timelapse
+  rm last
+else
+  echo directory $INPUT_DIR not found
+fi

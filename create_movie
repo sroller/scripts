@@ -1,0 +1,9 @@
+#!/bin/bash
+
+START_TIME=$SECONDS
+# MOVIE=$(stat -c"%z" tl000001.jpg|cut -d " " -f1)-$(date +"%s")-movie.mp4
+MOVIE=$(stat -c"%z" tl000001.jpg|cut -d " " --output-delimiter=- -f1,2|cut -b1-19|sed s/:/-/g).mp4
+echo -n create_movie $MOVIE ...
+avconv -y -v error -r 30 -f image2 -i tl%06d.jpg -an -preset slow -c:v h264 -r 30 $MOVIE
+ELAPSED_TIME=$(($SECONDS - $START_TIME))
+echo $MOVIE finished in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec

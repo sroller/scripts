@@ -1,0 +1,30 @@
+#!/bin/bash
+if [ $# -lt 2 ]; then
+  echo "$(basename $0) <directory> <filespec>"
+  exit
+fi
+
+if [ -f $1 ]; then
+  echo ERROR: $1 is a filename
+  echo please give a directory
+  exit
+fi
+
+TGTDIR=$1
+shift
+mkdir -p $TGTDIR
+START_TIME=$SECONDS
+
+j=0
+echo -n creating overlays ...
+while [ $# -ne 0 ]; do
+  if [ ! -f $TGTDIR/$1 ]
+  then
+    j=$(($j+1))
+    convert $1 -font Envy-Code-R-Regular -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 "%[EXIF:DateTimeOriginal]" $TGTDIR/$1
+    touch -f $1 $TGTDIR/$1
+  fi
+  # rm $1
+  shift
+done
+echo $j files converted in $(($SECONDS-$START_TIME)) sec

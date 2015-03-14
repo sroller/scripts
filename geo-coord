@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+require "httpclient"
+require "awesome_print"
+require "json"
+
+c = HTTPClient.new
+r = c.get_content("http://freegeoip.net/json/")
+ap JSON.parse(r)
