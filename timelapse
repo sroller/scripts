@@ -16,17 +16,16 @@ function help {
 
 CMD=$1
 shift
-
+PID=$(pgrep raspistill)
 if [ "$CMD" = "start" ] || [ "$CMD" = "stop" ]
 then
 
-  PID=$(pgrep raspistill)
   case "$CMD" in
     stop)
 
       if [ -z "$PID" ]
       then
-        echo raspistill not running
+        echo ...
       else
         kill $PID
         echo we stopped raspistill with pid: $PID
@@ -52,10 +51,17 @@ then
     *)
       SCRIPTNAME=$(basename $0)
       echo "$SCRIPTNAME start|stop"
+
       ;;
   esac
 
 else
+  if [ -z "$PID" ]
+  then
+    echo raspistill not running
+  else
+    echo raspistill found with pid $PID
+  fi
   help
 fi
 
