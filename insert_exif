@@ -24,7 +24,7 @@ while [ $# -ne 0 ]; do
     convert $1 -font Envy-Code-R-Regular -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 "%[EXIF:DateTimeOriginal]" $TGTDIR/$1
     touch -f $1 $TGTDIR/$1
   fi
-  # rm $1
+  rm $1
   shift
 done
 echo $j files converted in $(($SECONDS-$START_TIME)) sec
