@@ -15,6 +15,8 @@ shift
 mkdir -p $TGTDIR
 START_TIME=$SECONDS
 
+# are we running interactive?
+
 j=0
 echo -n creating overlays ...
 while [ $# -ne 0 ]; do
@@ -27,4 +29,5 @@ while [ $# -ne 0 ]; do
   rm $1
   shift
 done
-echo $j files converted in $(($SECONDS-$START_TIME)) sec
+ELAPSED_TIME=$(($SECONDS - $START_TIME))
+echo $j files converted in $(($ELAPSED_TIME/60/60)) hrs, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
