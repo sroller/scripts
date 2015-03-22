@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+
+# require 'sun_times'
+require 'erb'
+
+# lat = 43.4294
+# lon = -80.4095
+# sun = SunTimes.new
+# jetzt = Time.now
+
+
+links = {}
+home = ENV['HOME']
+Dir["#{home}/pictures/2*.jpg"].each do |f|
+	bn = File.basename(f)
+	time_stamp = /(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})/.match(bn)
+	tm = Time.new($1.to_i, $2.to_i, $3.to_i, $4.to_i, $5.to_i, 0, "-00:00")
+	links[bn] = "<a href='#{bn}'>#{tm.localtime.strftime('%d.%m.%y %H:%M')}</a>"
+end
+
+keys = links.keys.sort.reverse
+
+print ERB.new(<<INDEX).result(binding)
+<!DOCTYPE html>
+<html>
+<head>
+<title>Latest pictures</title>
+</head>
+<body>
+<h1>Latest Pictures</h1>
+<ul>
+<% keys.each do |k| %>
+     <li><%=links[k] %>
+<% end %>
+</ul>
+<hr />
+<a href="/">Home</a>
+</body>
+</html>
+
+INDEX
