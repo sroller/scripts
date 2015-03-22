@@ -3,7 +3,17 @@
 require "httpclient"
 require "awesome_print"
 require "json"
+require 'sun_times'
 
 c = HTTPClient.new
 r = c.get_content("http://freegeoip.net/json/")
-ap JSON.parse(r)
+geo_data = JSON.parse(r)
+ap geo_data
+
+jetzt = Time.now
+lat = geo_data['latitude']
+lon = geo_data['longitude']
+sun = SunTimes.new
+
+print "Sunrise: ", sun.rise(jetzt, lat, lon).localtime.strftime("%X"), "\n"
+print "Sunset: ", sun.set(jetzt, lat, lon).localtime.strftime("%X"), "\n"
