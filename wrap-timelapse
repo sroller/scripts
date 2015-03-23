@@ -6,7 +6,7 @@ OUTPUT_DIR=exif
 if [ -d $INPUT_DIR ]; then
   cd $INPUT_DIR
   echo INPUTDIR=$INPUT_DIR
-  insert_exif $OUTPUT_DIR tl*.jpg
+  insert-exif $OUTPUT_DIR tl*.jpg
   cd $OUTPUT_DIR
   create-movie
   mv -v *.mp4 ~/movies
