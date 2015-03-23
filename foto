@@ -6,4 +6,4 @@ FOTO=$WWWDIR/`date --utc +%Y-%m-%d-%H-%M-%S`.jpg
 raspistill -n -w 1280 -h 720 -t 500 -o $FOTO $*
 ln --symbolic --force $FOTO $WWWDIR/last.jpg
 convert $FOTO -font Envy-Code-R-Regular -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 "%[exif:DateTimeOriginal]" $FOTO
-foto_job.rb > $WWWDIR/index.html
+create-foto-index > $WWWDIR/index.html
