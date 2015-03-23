@@ -7,10 +7,18 @@
 
 function help {
   SCRIPT=$(basename $0)
-  echo "$SCRIPT start|stop"
-  echo first parameter has to be 'start' or 'stop'
-  echo the following parameters will be handed to raspistill
-  echo try again ...
+  echo
+  if [ ! -z "$PID" ]; then
+    echo "     raspistill is running"
+    echo "     PID: $PID"
+    echo "     output to $(cat ~/tmp/timelapse.dir)"
+    echo
+    echo type $SCRIPT stop to end
+  else
+    echo "     raspistill is not running"
+    echo
+    echo "     type $SCRIPT start to begin timelapse"
+  fi
   exit
 }
 
@@ -25,10 +33,12 @@ then
 
       if [ -z "$PID" ]
       then
-        echo ...
+        echo raspistill is not running
       else
         kill $PID
         echo we stopped raspistill with pid: $PID
+        echo
+        echo "go to $(cat ~/tmp/timelapse.dir) for the output"
       fi
       ;;
 
@@ -38,6 +48,7 @@ then
         echo "found running raspistill, pid $PID"
       else
         DIR=~/timelapse/`date +%Y%m%d-%H%M`
+        echo $DIR > ~/tmp/timelapse.dir
         FOTOS=~/pictures
         mkdir -p $DIR
         ln -nsf $DIR ~/timelapse/last
@@ -45,6 +56,7 @@ then
         # raspistill -w 2592 -h 1096 --thumb none -tl 5000 -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
         echo raspistill started
         echo stop with: timelapse stop
+        echo output directory: $DIR
       fi
       ;;
 
@@ -56,12 +68,6 @@ then
   esac
 
 else
-  if [ -z "$PID" ]
-  then
-    echo raspistill not running
-  else
-    echo raspistill found with pid $PID
-  fi
   help
 fi
 
