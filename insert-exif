@@ -10,12 +10,18 @@ if [ -f $1 ]; then
   exit
 fi
 
+echo anzahl $#
 TGTDIR=$1
 shift
+
+# are files present?
+if [ ! -f $1 ]; then
+  echo nothing to do
+  exit
+fi
+
 mkdir -p $TGTDIR
 START_TIME=$SECONDS
-
-# are we running interactive?
 
 j=0
 echo -n creating overlays ...
