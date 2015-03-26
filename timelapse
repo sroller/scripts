@@ -13,7 +13,7 @@ function help {
     echo "     PID: $PID"
     echo "     output to $(cat ~/tmp/timelapse.dir)"
     echo
-    echo type $SCRIPT stop to end
+    echo "     type $SCRIPT stop to end timelapse recording"
   else
     echo "     raspistill is not running"
     echo
