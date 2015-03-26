@@ -16,4 +16,4 @@ lon = geo_data['longitude']
 sun = SunTimes.new
 
 print "Sunrise: ", sun.rise(jetzt, lat, lon).localtime.strftime("%X"), "\n"
-print "Sunset: ", sun.set(jetzt, lat, lon).localtime.strftime("%X"), "\n"
+print "Sunset : ", sun.set(jetzt, lat, lon).localtime.strftime("%X"), "\n"
