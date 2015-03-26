@@ -1,0 +1,3 @@
+#!/bin/sh
+
+install -Cv -g staff check-wifi timelapse insert-exif create-movie geo-coord geo-coord /usr/local/bin
