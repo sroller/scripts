@@ -7,14 +7,17 @@
 # if not than restart connection
 #
 
-IP=$(ifconfig wlan0 | grep "inet addr:" | cut -d":" -f2| cut -d" " -f1)
-if [ ! -z "$IP" ]; then
-  logger wifi up: $IP
-else
-  logger "connection down! attempting reconnection"
-  ifdown --force wlan0
-  sleep 10
-  ifup --force wlan0
-  ifconfig wlan0
+# check if there is Wifi USB dongle plugged in
+if lsusb | grep -q "Ralink"; then
+  # does it have an address?
+  IP=$(ifconfig wlan0 | grep "inet addr:" | cut -d":" -f2| cut -d" " -f1)
+  if [ ! -z "$IP" ]; then
+    logger wifi up: $IP
+  else
+    logger "connection down! attempting reconnection"
+    ifdown --force wlan0
+    sleep 10
+    ifup --force wlan0
+    ifconfig wlan0
+  fi
 fi
-
