@@ -1,0 +1,26 @@
+#!/bin/sh
+
+echo -n "CPU(0) freq: " ; cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq
+echo -n "CPU(1) freq: " ; cat /sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq
+echo -n "CPU(2) freq: " ; cat /sys/devices/system/cpu/cpu2/cpufreq/scaling_cur_freq
+echo -n "CPU(3) freq: " ; cat /sys/devices/system/cpu/cpu3/cpufreq/scaling_cur_freq
+echo -n "CPU " ; vcgencmd measure_temp
+
+echo
+echo "clocks"
+echo "======"
+for src in arm core h264 isp v3d uart pwm emmc pixel vec hdmi dpi ; do \
+  echo "$src:\t$(vcgencmd measure_clock $src)" ; \
+done
+
+echo 
+echo "voltage"
+echo "======="
+for id in core sdram_c sdram_i sdram_p ; do \
+  echo "$id:\t$(vcgencmd measure_volts $id)" ; \
+done
+
+echo
+echo "memory split"
+echo "============"
+vcgencmd get_mem arm && vcgencmd get_mem gpu
