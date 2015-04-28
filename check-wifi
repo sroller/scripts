@@ -12,9 +12,9 @@ if lsusb | grep -q "Ralink"; then
   # does it have an address?
   IP=$(ifconfig wlan0 | grep "inet addr:" | cut -d":" -f2| cut -d" " -f1)
   if [ ! -z "$IP" ]; then
-    logger -t "$(basename $0)" up: $IP
+    logger -t "${0##*/}" up: $IP
   else
-    logger -t "$(basename $0)" "connection down! attempting reconnection"
+    logger -t "${0##*/}" "connection down! attempting reconnection"
     ifdown --force wlan0
     sleep 10
     ifup --force wlan0

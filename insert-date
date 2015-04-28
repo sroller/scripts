@@ -1,6 +1,6 @@
 #!/bin/bash
 if [ $# -lt 2 ]; then
-  echo "$(basename $0) <directory> <filespec>"
+  echo "${0##*/} <directory> <filespec>"
   exit
 fi
 

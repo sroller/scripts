@@ -6,18 +6,18 @@
 # the following parameter will be appended to the raspistill command
 
 function help {
-  SCRIPT=$(basename $0)
+  SCRIPT=${0##*/}
   echo
   if [ ! -z "$PID" ]; then
     echo "     raspistill is running"
     echo "     PID: $PID"
     echo "     output to $(cat ~/tmp/timelapse.dir)"
     echo
-    echo "     type $SCRIPT stop to end timelapse recording"
+    echo "     type '$SCRIPT stop' to end timelapse recording"
   else
     echo "     raspistill is not running"
     echo
-    echo "     type $SCRIPT start to begin timelapse"
+    echo "     type '$SCRIPT start' to begin timelapse"
   fi
   exit
 }
@@ -60,7 +60,7 @@ then
       ;;
 
     *)
-      SCRIPTNAME=$(basename $0)
+      SCRIPTNAME=${0##*/}
       echo "$SCRIPTNAME start|stop"
 
       ;;
