@@ -1,0 +1,27 @@
+#!/bin/sh
+
+if [ $IFACE = "lo" ]; then
+  exit
+fi
+
+if [ $IFACE = "--all" ]; then
+  exit
+fi
+
+logger $IFACE up
+
+IP_ADDR=$(ifconfig $IFACE | grep "inet addr:" | awk '{ print $2 }')
+TIME=$(date)
+
+logger $IFACE IP_ADDR $IP_ADDR
+mailx -s "PI2 ip number" steffen@vineta.ca <<EOM
+
+Time: $TIME
+
+interface $IFACE connected
+
+I am online at: $IP_ADDR
+
+http://$IP_ADDR:4000
+
+EOM
