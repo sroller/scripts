@@ -3,7 +3,14 @@
 WWWDIR=~/pictures
 FOTO=$WWWDIR/`date --utc +%Y-%m-%d-%H-%M-%S`.jpg
 # raspistill -n -w 1280 -h 720 -t 1 `/root/bin/tag_oder_nacht.rb` -o $FOTO
-raspistill -n -w 1280 -h 720 -t 500 -o $FOTO $*
-ln --symbolic --force $FOTO $WWWDIR/last.jpg
+# raspistill -n -w 1280 -h 720 -t 500 -o $FOTO $*
+echo -n "Taking picture, "
+raspistill -n `day-or-night` -t 2000 -o $FOTO $*
+echo -n "inserting date and time, "
+# ln --symbolic --force $FOTO $WWWDIR/last.jpg
 convert $FOTO -font Envy-Code-R-Regular -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 "%[exif:DateTimeOriginal]" $FOTO
-create-foto-index > $WWWDIR/index.html
+echo -n "resizing last.jpg to 1280x720, "
+convert $FOTO -resize 1280x720 $WWWDIR/last.jpg
+# echo -n "creating new index.html, "
+# create-foto-index > $WWWDIR/index.html
+echo done.

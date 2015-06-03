@@ -51,7 +51,7 @@ then
         echo $DIR > ~/tmp/timelapse.dir
         FOTOS=~/pictures
         mkdir -p $DIR
-        raspistill -w 1280 -h 720 -tl 29000 --thumb none -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
+        raspistill -w 1920 -h 1080 -tl 5000 --thumb none -ex auto -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
         # raspistill -w 2592 -h 1096 --thumb none -tl 5000 -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
         echo raspistill started
         echo stop with: timelapse stop

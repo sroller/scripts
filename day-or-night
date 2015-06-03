@@ -3,8 +3,8 @@
 require 'sun_times'
 
 jetzt = Time.now
-lat = ENV['LAT']
-lon = ENV['LON']
+lat = 43
+lon = 80
 sun = SunTimes.new
 
 if jetzt > sun.rise(jetzt, lat, lon) && jetzt < sun.set(jetzt, lat, lon)
