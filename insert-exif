@@ -29,8 +29,9 @@ while [ $# -ne 0 ]; do
   if [ ! -f $TGTDIR/$1 ]
   then
     j=$(($j+1))
+    convert $1 -resize 1280x960 $1
     convert $1 -font Envy-Code-R-Regular -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 "%[EXIF:DateTimeOriginal]" $TGTDIR/$1
-    touch -f $1 $TGTDIR/$1
+    touch $TGTDIR/$1 -r $1
   fi
   rm $1
   shift
