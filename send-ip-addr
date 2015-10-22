@@ -14,7 +14,7 @@ IP_ADDR=$(ifconfig $IFACE | grep "inet addr:" | awk '{ print $2 }')
 TIME=$(date)
 
 logger $IFACE IP_ADDR $IP_ADDR
-mailx -s "PI2 ip number" steffen@vineta.ca <<EOM
+mailx -s "$HOSTNAME ip number" steffen.roller@gmail.com <<EOM
 
 Time: $TIME
 
