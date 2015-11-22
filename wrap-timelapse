@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DIR=/tmp/timelapse.dir
+DIR=~/tmp/timelapse.dir
 INPUT_DIR=$(cat ~/tmp/timelapse.dir)
 OUTPUT_DIR=exif
 
