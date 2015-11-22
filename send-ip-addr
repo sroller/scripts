@@ -10,7 +10,12 @@ fi
 
 logger $IFACE up
 
-IP_ADDR=$(ifconfig $IFACE | grep "inet addr:" | awk '{ print $2 }')
+IP_ADDR=$(ifconfig $IFACE | grep "inet addr:" | awk '{ print $2 }' | cut -d: -f2)
+
+if [ -z $IP_ADDR ]; then
+	exit
+fi
+
 TIME=$(date)
 
 logger $IFACE IP_ADDR $IP_ADDR
