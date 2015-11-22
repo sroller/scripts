@@ -48,6 +48,7 @@ then
         echo "found running raspistill, pid $PID"
       else
         DIR=~/timelapse/`date +%Y%m%d-%H%M`
+	mkdir -p ~/tmp
         echo $DIR > ~/tmp/timelapse.dir
         FOTOS=~/pictures
         mkdir -p $DIR
