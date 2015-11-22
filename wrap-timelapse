@@ -2,6 +2,7 @@
 
 DIR=~/tmp/timelapse.dir
 INPUT_DIR=$(cat ~/tmp/timelapse.dir)
+
 OUTPUT_DIR=exif
 
 if [ ! -f $DIR ]; then
