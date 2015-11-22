@@ -16,7 +16,9 @@ end
 
 keys = links.keys.sort.reverse
 
-print ERB.new(<<INDEX).result(binding)
+File.open("#{home}/pictures/index.html", "w") { |index|
+
+index.write(ERB.new(<<INDEX).result(binding))
 <!DOCTYPE html>
 <html>
 <head>
@@ -24,6 +26,7 @@ print ERB.new(<<INDEX).result(binding)
 </head>
 <body>
 <h1>Latest Pictures</h1>
+(created <%=Time.now%>)
 <ul>
 <% keys.each do |k| %>
      <li><%=links[k] %>
@@ -35,3 +38,5 @@ print ERB.new(<<INDEX).result(binding)
 </html>
 
 INDEX
+} 
+
