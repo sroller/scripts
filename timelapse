@@ -22,8 +22,43 @@ function help {
   exit
 }
 
+# default parameter
+EX=auto
+TL=30000
+WIDTH=1280
+HEIGHT=720
+
+while getopts ":nt:w:h:" opt; do
+  case $opt in
+    n)
+      echo "night start"
+      EX="night"
+      ;;
+    t)
+      echo "interval $OPTARG"
+      TL=$OPTARG
+      ;;
+    w)
+      echo "width $OPTARG"
+      WIDTH=$OPTARG
+      ;;
+    h)
+      echo "height $OPTARG"
+      HEIGHT=$OPTARG
+      ;;
+    \?)
+      echo "invalid option: -$OPTARG"
+      ;;
+  esac
+done
+shift $((OPTIND-1))
+
 CMD=$1
 shift
+
+# echo raspistill -w $WIDTH -h $HEIGHT -ex $EX -tl $TL $CMD
+
+
 PID=$(pgrep raspistill)
 if [ "$CMD" = "start" ] || [ "$CMD" = "stop" ]
 then
@@ -52,8 +87,8 @@ then
         echo $DIR > ~/tmp/timelapse.dir
         FOTOS=~/pictures
         mkdir -p $DIR
-        raspistill -w 1920 -h 1080 -tl 5000 --thumb none -ex auto -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
-        # raspistill -w 2592 -h 1096 --thumb none -tl 5000 -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
+        echo raspistill -w $WIDTH -h $HEIGHT -tl $TL --thumb none -ex $EX -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
+        raspistill -w $WIDTH -h $HEIGHT -tl $TL --thumb none -ex $EX -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
         echo raspistill started
         echo stop with: timelapse stop
         echo output directory: $DIR
