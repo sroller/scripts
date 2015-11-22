@@ -1,7 +1,14 @@
 #!/bin/bash
 
+DIR=/tmp/timelapse.dir
 INPUT_DIR=$(cat ~/tmp/timelapse.dir)
 OUTPUT_DIR=exif
+
+if [ ! -f $DIR ]; then
+	logger -s "$DIR doesn't exist"
+	logger -s "abort"
+	exit
+fi
 
 if [ -d $INPUT_DIR ]; then
   cd $INPUT_DIR
@@ -9,13 +16,14 @@ if [ -d $INPUT_DIR ]; then
   insert-exif $OUTPUT_DIR tl*.jpg
   cd $OUTPUT_DIR
   TGTDATE=$(identify -format %[EXIF:DateTime] tl000001.jpg|cut -b1-10|cut -d":" -f1,2,3 --output-delimiter="")
-  TGTDIR=/mnt/hennecke/timelapse/pi/$TGTDATE
+  TGTDIR=/mnt/hennecke/timelapse/$(hostname)/$TGTDATE
   START_TIME=$SECONDS
   mkdir -p $TGTDIR
   FILES=$(cp -v tl*.jpg $TGTDIR|wc -l)
   ELAPSED_TIME=$(($SECONDS - $START_TIME))
   echo copied $FILES from $OUTPUT_DIR to $TGTDIR in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
   create-movie
+  mkdir -p ~/movies
   mv -v *.mp4 ~/movies
   cd ~/timelapse
 else
