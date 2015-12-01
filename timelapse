@@ -27,8 +27,9 @@ EX=auto
 TL=30000
 WIDTH=1280
 HEIGHT=720
+FLIP=
 
-while getopts ":nt:w:h:" opt; do
+while getopts ":nut:w:h:" opt; do
   case $opt in
     n)
       echo "night start"
@@ -45,6 +46,10 @@ while getopts ":nt:w:h:" opt; do
     h)
       echo "height $OPTARG"
       HEIGHT=$OPTARG
+      ;;
+    v)
+      echo "upside down mode"
+      FLIP=-vf -hf
       ;;
     \?)
       echo "invalid option: -$OPTARG"
@@ -83,12 +88,12 @@ then
         echo "found running raspistill, pid $PID"
       else
         DIR=~/timelapse/`date +%Y%m%d-%H%M`
-	mkdir -p ~/tmp
+        mkdir -p ~/tmp
         echo $DIR > ~/tmp/timelapse.dir
         FOTOS=~/pictures
         mkdir -p $DIR
-        echo raspistill -w $WIDTH -h $HEIGHT -tl $TL --thumb none -ex $EX -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
-        raspistill -w $WIDTH -h $HEIGHT -tl $TL --thumb none -ex $EX -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
+        echo raspistill -w $WIDTH -h $HEIGHT -tl $TL $FLIP --thumb none -ex $EX -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
+        raspistill -w $WIDTH -h $HEIGHT -tl $TL $FLIP --thumb none -ex $EX -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
         echo raspistill started
         echo stop with: timelapse stop
         echo output directory: $DIR
