@@ -47,7 +47,7 @@ while getopts ":nut:w:h:" opt; do
       echo "height $OPTARG"
       HEIGHT=$OPTARG
       ;;
-    v)
+    u)
       echo "upside down mode"
       FLIP=-vf -hf
       ;;
