@@ -49,7 +49,7 @@ while getopts ":nut:w:h:" opt; do
       ;;
     u)
       echo "upside down mode"
-      FLIP=-vf -hf
+      FLIP="-vf -hf"
       ;;
     \?)
       echo "invalid option: -$OPTARG"
