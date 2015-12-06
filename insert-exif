@@ -10,7 +10,7 @@ if [ -f $1 ]; then
   exit
 fi
 
-echo anzahl $#
+echo begin to process $# files
 TGTDIR=$1
 shift
 
