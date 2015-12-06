@@ -10,9 +10,9 @@ if [ -f $1 ]; then
   exit
 fi
 
-echo begin to process $# files
 TGTDIR=$1
 shift
+echo begin to process $# files
 
 # are files present?
 if [ ! -f $1 ]; then
@@ -29,8 +29,17 @@ while [ $# -ne 0 ]; do
 	if [ ! -f $TGTDIR/$1 ]
 	then
 		j=$(($j+1))
-		if ! convert $1 -resize 1280x960 $1; then
-			if ! convert $1 -font EnvyCodeR -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 "%[EXIF:DateTimeOriginal]" $TGTDIR/$1; then
+		convert $1 -resize 1280x960 $1
+		if (($? != 0)); then
+			echo "$?: couldn't convert $1"
+		else
+			convert $1 -font EnvyCodeR -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 "%[EXIF:DateTimeOriginal]" $TGTDIR/$1
+			if (($? != 0)); then
+				echo "$?: couldn't annotate $1"
+			else
+				if [ -z "$PS1" ]; then # interactive
+					echo "$1 ok"
+				fi
 				touch $TGTDIR/$1 -r $1
 				rm $1
 			fi
@@ -40,3 +49,4 @@ while [ $# -ne 0 ]; do
 done
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 echo $j files converted in $(($ELAPSED_TIME/60/60)) hrs, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
+
