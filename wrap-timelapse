@@ -16,7 +16,8 @@ if [ -d $INPUT_DIR ]; then
   echo INPUTDIR=$INPUT_DIR
   insert-exif $OUTPUT_DIR tl*.jpg
   cd $OUTPUT_DIR
-  TGTDATE=$(identify -format %[EXIF:DateTime] tl000001.jpg|cut -b1-10|cut -d":" -f1,2,3 --output-delimiter="")
+  # TGTDATE=$(identify -format %[EXIF:DateTime] tl000001.jpg|cut -b1-10|cut -d":" -f1,2,3 --output-delimiter="")
+  TGTDATE=$(basename $INPUT_DIR)
   TGTDIR=/mnt/hennecke/timelapse/$(hostname)/$TGTDATE
   START_TIME=$SECONDS
   mkdir -p $TGTDIR
