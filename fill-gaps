@@ -5,12 +5,20 @@ require 'fileutils'
 files = Dir["tl*.jpg"].sort
 i = 1
 last = files.size 
-print "from #{i} to #{last}\n"
+changed=0
+print "checking files from tl#{"%06d" % i}.jpg to tl#{"%06d" % last}.jpg\n"
 while (i < last) do
   fn = sprintf("tl%06d.jpg", i)
   unless (File.file?(fn))
-    print fn, "\n"
+    print "missing ", fn, "\n"
     FileUtils.cp(sprintf('tl%06d.jpg', i-1), fn, {:verbose => true})
+    changed += 1
   end
   i += 1
 end
+
+print (case changed
+  when 0 then "no file"
+  when 1 then "one file"
+  else "5#{changed} files"
+end), " changed\n"
