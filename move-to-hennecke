@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# is /mnt/hennecke mounted?
+echo "checking whether hennecke is mounted ..."
+if [ -z "$(mount|grep '//hennecke/share')" ]; then
+	echo "hennecke not mounted"
+	exit
+fi
+
+HOSTNAME=$(hostname -f)
+DATE=$(date +%Y%m%d)
+TGTDIR=/mnt/hennecke/timelapse/$HOSTNAME/$(basename $PWD)
+mkdir -p $TGTDIR
+for jpg in *.jpg
+do
+	echo mv -v $jpg $TGTDIR
+done
