@@ -40,7 +40,7 @@ while [ $# -ne 0 ]; do
 				if [ -z "$PS1" ]; then # interactive
 					echo "$1 ok"
 				fi
-				touch $TGTDIR/$1 -r $1
+				touch -r $1 $TGTDIR/$1
 				rm $1
 			fi
 		fi
