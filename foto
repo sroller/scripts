@@ -10,7 +10,7 @@ echo -n "Taking picture, "
 raspistill -n `day-or-night` -t 2000 -o $FOTO $*
 echo -n "inserting date and time, "
 # ln --symbolic --force $FOTO $WWWDIR/last.jpg
-convert $FOTO -font EnvyCodeR -gravity SouthEast -pointsize 36 -fill Magenta -annotate +12+12 "%[exif:DateTimeOriginal]" $FOTO
+convert $FOTO -font EnvyCodeR -gravity SouthEast -pointsize 36 -fill White -annotate +12+12 "%[exif:DateTimeOriginal]" $FOTO
 echo -n "resizing last.jpg to 1280x720, "
 convert $FOTO -resize 1280x720 $WWWDIR/last.jpg
 echo -n "creating new index.html, "
