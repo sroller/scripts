@@ -21,7 +21,7 @@ if [ -d $INPUT_DIR ]; then
   TGTDIR=/mnt/hennecke/timelapse/$(hostname)/$TGTDATE
   START_TIME=$SECONDS
   mkdir -p $TGTDIR
-  FILES=$(cp -v tl*.jpg $TGTDIR|wc -l)
+  FILES=$(cp -vu tl*.jpg $TGTDIR|wc -l)
   ELAPSED_TIME=$(($SECONDS - $START_TIME))
   echo copied $FILES from $OUTPUT_DIR to $TGTDIR in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
   create-movie
