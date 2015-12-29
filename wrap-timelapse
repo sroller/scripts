@@ -25,6 +25,7 @@ if [ -d $INPUT_DIR ]; then
   echo copied $FILES from $OUTPUT_DIR to $TGTDIR in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
   create-movie
   mkdir -p ~/movies
+  cp -v *.mp4 /mnt/hennecke/timelapse/$(hostname)/movies
   mv -v *.mp4 ~/movies
   cd ~/timelapse
 else
