@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+
+require 'fileutils'
+
+files = Dir["tl*.jpg"].sort
+i = 1
+last = files.size 
+print "from #{i} to #{last}\n"
+while (i < last) do
+  fn = sprintf("tl%06d.jpg", i)
+  unless (File.file?(fn))
+    print fn, "\n"
+    FileUtils.cp(sprintf('tl%06d.jpg', i-1), fn, {:verbose => true})
+  end
+  i += 1
+end
