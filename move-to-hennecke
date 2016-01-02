@@ -2,16 +2,20 @@
 
 # is /mnt/hennecke mounted?
 echo "checking whether hennecke is mounted ..."
-if [ -z "$(mount|grep '//hennecke/share')" ]; then
+if ! mountpoint /mnt/hennecke; then
 	echo "hennecke not mounted"
 	exit
 fi
 
 HOSTNAME=$(hostname -f)
 DATE=$(date +%Y%m%d)
-TGTDIR=/mnt/hennecke/timelapse/$HOSTNAME/$(basename $PWD)
+
+# we're in .../exif but want to know the name of the directory
+# one level up
+TGTDIR=/mnt/hennecke/timelapse/$HOSTNAME/$(echo $PWD | awk -F \/ '{print $(NF-1)}')
+echo move to $TGTDIR
 mkdir -p $TGTDIR
 for jpg in *.jpg
 do
-	echo mv -v $jpg $TGTDIR
+	mv -uv $jpg $TGTDIR
 done
