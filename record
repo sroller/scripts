@@ -1,5 +1,18 @@
 #!/bin/bash
 
-FILE=vid-$(date +"%Y%m%d-%H%M%S").h264
+if [ ! -z $1 ]; then
+  TIME=$1
+else
+  TIME=5
+fi
+
+FPS=15
+WIDTH=1920
+HEIGHT=1080
+FILE=vid-$(date +"%Y%m%d-%H%M%S")
 BITRATE=3500000
-raspivid -v -w 1296 -h 730 -a 12 -a "%d.%m.%Y %H:%M:%S" --shutter 2000 -st -n -fps 15 -b $BITRATE -pf high -ISO 800 -ex night -t 15000 -o $FILE
+MSEC=$((TIME * 1000))
+echo "record for $TIME seconds"
+raspivid -v -w $WIDTH -h $HEIGHT -a 12 -a "%d.%m.%Y %H:%M:%S" -st -n -fps $FPS -b $BITRATE -pf high -ISO 800 -ex night -t $MSEC -o $FILE.h264
+echo "convert to mp4"
+avconv -y -v fatal -r $FPS -i $FILE.h264 -c:v copy -an $FILE.mp4
