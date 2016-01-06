@@ -1,0 +1,5 @@
+#!/bin/bash
+
+FILE=vid-$(date +"%Y%m%d-%H%M%S").h264
+BITRATE=3500000
+raspivid -v -w 1296 -h 730 -a 12 -a "%d.%m.%Y %H:%M:%S" --shutter 2000 -st -n -fps 15 -b $BITRATE -pf high -ISO 800 -ex night -t 15000 -o $FILE
