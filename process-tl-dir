@@ -1,0 +1,55 @@
+#!/usr/bin/env perl
+
+# list all directories of the form YYYYMMDD-HHMM
+#
+use strict;
+use warnings;
+
+my $exif = "exif"; # output directory
+
+sub get_dirs {
+  my $cwd = ".";
+  my @dirs = ();
+  opendir(CWD, $cwd) or die $!;
+  while(my $dir = readdir(CWD)) {
+    # print $dir, "\n";
+    next unless $dir =~ /\d{8}\-\d{4}/;
+    push(@dirs, $dir);
+  }
+  closedir(CWD);
+  return @dirs;
+}
+
+sub max_number($) {
+  my ($dir) = @_;
+  my $max = 0;
+  my $jpg = "";
+  opendir(DIR, $dir) or die $!;
+  while (readdir(DIR)) {
+    # print $_, "\n";
+    ($jpg) = m/(\d+).jpg/;
+    next if !defined($jpg);
+    # printf "%d\n", $jpg;
+    if ($jpg > $max) { $max = $jpg; }
+  }
+  closedir(DIR);
+  return $max +0;
+}
+
+mkdir $exif;
+my @dirs = get_dirs();
+my $number = max_number($exif) + 1;
+
+foreach my $dir (@dirs) {
+  print "process dir=", $dir, "\n";
+  opendir(TL, $dir) or die $!;
+  while(my $jpg = readdir(TL)) {
+    next unless $jpg =~ /tl\d+.jpg/;
+    my $tgt = sprintf("tl%06d.jpg", $number);
+    print "convert $jpg to $exif/$tgt\n";
+    $number++;
+  }
+  closedir(TL);
+  print "\n";
+}
+
