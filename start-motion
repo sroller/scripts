@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# pkill uv4l
-# uv4l --driver raspicam --auto-video_nr --extension-presence=1
+pkill uv4l
+uv4l --driver raspicam --auto-video_nr --extension-presence=1
 
-LD_PRELOAD=/usr/lib/uv4l/uv4lext/armv6l/libuv4lext.so motion -n -c /home/steffenr/download/motion/motion.conf
+LD_PRELOAD=/usr/lib/uv4l/uv4lext/armv6l/libuv4lext.so motion -n
