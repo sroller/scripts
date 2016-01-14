@@ -1,7 +1,19 @@
 #!/usr/bin/env perl
-
-# list all directories of the form YYYYMMDD-HHMM
+# 
+# process all subdirectories of the name NNNNNNNN-NNNN (YYYYMMDD-HHMM)
 #
+# pick up the invidual tl*.jpg files
+# from different restarts of the timelapse script due to reboots
+#
+# use 'convert' to overlay each picture with the ExifDateTime value
+#
+# store the results in directory $exif
+#
+# make sure the resulting files are numbered starting with tl000001.jpg without
+# a gap to prepare for the later creation of the timelapse video using
+# 'avconv' from the libav or ffmpeg project
+#
+
 use strict;
 use warnings;
 
@@ -47,6 +59,7 @@ foreach my $dir (@dirs) {
     next unless $jpg =~ /tl\d+.jpg/;
     my $tgt = sprintf("tl%06d.jpg", $number);
     print "convert $jpg to $exif/$tgt\n";
+    system("convert $dir/$jpg -font EnvyCodeR -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $exif/$tgt");
     $number++;
   }
   closedir(TL);
