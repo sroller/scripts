@@ -7,12 +7,13 @@ else
 fi
 
 FPS=15
+EX=auto
 WIDTH=1920
 HEIGHT=1080
 FILE=vid-$(date +"%Y%m%d-%H%M%S")
 BITRATE=3500000
 MSEC=$((TIME * 1000))
 echo "record for $TIME seconds"
-raspivid -v -w $WIDTH -h $HEIGHT -a 12 -a "%d.%m.%Y %H:%M:%S" -st -n -fps $FPS -b $BITRATE -pf high -ISO 800 -ex night -t $MSEC -o $FILE.h264
+raspivid -v -w $WIDTH -h $HEIGHT -a 12 -a "%d.%m.%Y %H:%M:%S" -st -n -fps $FPS -b $BITRATE -pf high -ex $EX -t $MSEC -o $FILE.h264
 echo "convert to mp4"
 avconv -y -v fatal -r $FPS -i $FILE.h264 -c:v copy -an $FILE.mp4
