@@ -18,6 +18,7 @@ use strict;
 use warnings;
 
 my $exif = "exif"; # output directory
+my $font = "Envy-Code-R";
 
 sub get_dirs {
   my $cwd = ".";
@@ -37,9 +38,9 @@ sub max_number($) {
   my $max = 0;
   my $jpg = "";
   opendir(DIR, $dir) or die $!;
-  while (readdir(DIR)) {
-    # print $_, "\n";
-    ($jpg) = m/(\d+).jpg/;
+  while (my $file = readdir(DIR)) {
+					# print $file, "\n";
+    ($jpg) = $file =~ m/(\d+).jpg/;
     next if !defined($jpg);
     # printf "%d\n", $jpg;
     if ($jpg > $max) { $max = $jpg; }
@@ -59,7 +60,7 @@ foreach my $dir (@dirs) {
     next unless $jpg =~ /tl\d+.jpg/;
     my $tgt = sprintf("tl%06d.jpg", $number);
     print "convert $jpg to $exif/$tgt\n";
-    system("convert $dir/$jpg -font EnvyCodeR -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $exif/$tgt");
+    system("convert $dir/$jpg -font '$font' -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $exif/$tgt");
     $number++;
   }
   closedir(TL);
