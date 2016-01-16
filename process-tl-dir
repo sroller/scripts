@@ -18,7 +18,13 @@ use strict;
 use warnings;
 
 my $exif = "exif"; # output directory
-my $font = "Envy-Code-R";
+my $font;
+
+if ("$^O" == "MSWin32") {
+	$font = "Envy-Code-R";
+} else {
+	$font = "EnvyCodeR";
+}
 
 sub get_dirs {
   my $cwd = ".";
@@ -39,7 +45,7 @@ sub max_number($) {
   my $jpg = "";
   opendir(DIR, $dir) or die $!;
   while (my $file = readdir(DIR)) {
-					# print $file, "\n";
+    print $file, "\n";
     ($jpg) = $file =~ m/(\d+).jpg/;
     next if !defined($jpg);
     # printf "%d\n", $jpg;
@@ -60,10 +66,11 @@ foreach my $dir (@dirs) {
     next unless $jpg =~ /tl\d+.jpg/;
     my $tgt = sprintf("tl%06d.jpg", $number);
     print "convert $jpg to $exif/$tgt\n";
-    system("convert $dir/$jpg -font '$font' -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $exif/$tgt");
+    system("convert $dir/$jpg -font \"$font\" -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $exif/$tgt");
     $number++;
   }
   closedir(TL);
   print "\n";
 }
 
+# vim:ts=2:sw=2:
