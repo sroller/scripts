@@ -20,7 +20,7 @@ use warnings;
 my $exif = "exif"; # output directory
 my $font;
 
-if ("$^O" == "MSWin32") {
+if ("$^O" eq "MSWin32") {
 	$font = "Envy-Code-R";
 } else {
 	$font = "EnvyCodeR";
@@ -45,7 +45,7 @@ sub max_number($) {
   my $jpg = "";
   opendir(DIR, $dir) or die $!;
   while (my $file = readdir(DIR)) {
-    print $file, "\n";
+    # print $file, "\n";
     ($jpg) = $file =~ m/(\d+).jpg/;
     next if !defined($jpg);
     # printf "%d\n", $jpg;
