@@ -6,7 +6,13 @@ require "json"
 require 'sun_times'
 
 c = HTTPClient.new
-r = c.get_content("http://freegeoip.net/json/")
+begin
+	r = c.get_content("http://freegeoip.net/json/")
+rescue Exception => e
+	print "Error: ", e, "\n"
+	print "exiting ...\n"
+	exit
+end
 geo_data = JSON.parse(r)
 ap geo_data
 
