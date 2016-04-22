@@ -1,4 +1,4 @@
-# Scripts for the PI
+# Scripts for the PI and for other *ix machines
 
 ## Timelapse
 * timelaspe - take timelapse pictures
