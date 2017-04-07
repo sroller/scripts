@@ -15,19 +15,19 @@ if [ -d $INPUT_DIR ]; then
   cd $INPUT_DIR
   echo INPUTDIR=$INPUT_DIR
   # insert-exif $OUTPUT_DIR tl*.jpg
-  process-tl-dir
+  # process-tl-dir
   cd $OUTPUT_DIR
   TGTDATE=$(basename $INPUT_DIR)
   TGTDIR=/mnt/hennecke/timelapse/$(hostname)/$TGTDATE
   START_TIME=$SECONDS
   mkdir -p $TGTDIR
-  FILES=$(cp -vu tl*.jpg $TGTDIR|wc -l)
+  FILES=$(cp -vur tl*.jpg $TGTDIR|wc -l)
   ELAPSED_TIME=$(($SECONDS - $START_TIME))
   echo copied $FILES from $OUTPUT_DIR to $TGTDIR in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
-  create-movie
+  # create-movie
   mkdir -p ~/movies
-  cp -v *.mp4 /mnt/hennecke/timelapse/$(hostname)/movies
-  mv -v *.mp4 ~/movies
+  # cp -v *.mp4 /mnt/hennecke/timelapse/$(hostname)/movies
+  # mv -v *.mp4 ~/movies
   cd ~/timelapse
 else
   echo directory $INPUT_DIR not found

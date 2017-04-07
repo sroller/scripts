@@ -63,7 +63,7 @@ foreach my $dir (@dirs) {
   print "process dir=", $dir, "\n";
   opendir(TL, $dir) or die $!;
   while(my $jpg = readdir(TL)) {
-    next unless $jpg =~ /tl\d+.jpg/;
+    next unless $jpg =~ /tl\d+.jpg$/;
     my $tgt = sprintf("tl%06d.jpg", $number);
     print "convert $jpg to $exif/$tgt\n";
     system("convert $dir/$jpg -font \"$font\" -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $exif/$tgt");

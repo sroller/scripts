@@ -91,7 +91,7 @@ then
         mkdir -p $DAYDIR
         DIR=$DAYDIR/`date +%Y%m%d-%H%M`
         mkdir -p ~/tmp
-        echo $DIR > ~/tmp/timelapse.dir
+        echo $DAYDIR > ~/tmp/timelapse.dir
         FOTOS=~/pictures
         mkdir -p $DIR
         echo raspistill -w $WIDTH -h $HEIGHT -tl $TL $FLIP --thumb none -ex $EX -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
