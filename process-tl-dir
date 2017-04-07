@@ -46,7 +46,7 @@ sub max_number($) {
   opendir(DIR, $dir) or die $!;
   while (my $file = readdir(DIR)) {
     # print $file, "\n";
-    ($jpg) = $file =~ m/(\d+).jpg/;
+    ($jpg) = $file =~ m/(\d+).jpg$/;
     next if !defined($jpg);
     # printf "%d\n", $jpg;
     if ($jpg > $max) { $max = $jpg; }
