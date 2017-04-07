@@ -45,10 +45,10 @@ sub max_number($) {
   my $jpg = "";
   opendir(DIR, $dir) or die $!;
   while (my $file = readdir(DIR)) {
-    # print $file, "\n";
+		# print $file, "\n";
     ($jpg) = $file =~ m/(\d+).jpg$/;
     next if !defined($jpg);
-    # printf "%d\n", $jpg;
+		# printf "%d\n", $jpg;
     if ($jpg > $max) { $max = $jpg; }
   }
   closedir(DIR);
@@ -59,14 +59,18 @@ mkdir $exif;
 my @dirs = get_dirs();
 my $number = max_number($exif) + 1;
 
-foreach my $dir (@dirs) {
+foreach my $dir (sort(@dirs)) {
   print "process dir=", $dir, "\n";
   opendir(TL, $dir) or die $!;
+	my @files = ();
   while(my $jpg = readdir(TL)) {
     next unless $jpg =~ /tl\d+.jpg$/;
+		push(@files, $jpg);
+	}
+	foreach my $jpg (sort(@files)) {
     my $tgt = sprintf("tl%06d.jpg", $number);
     print "convert $jpg to $exif/$tgt\n";
-    system("convert $dir/$jpg -font \"$font\" -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $exif/$tgt");
+		system("convert $dir/$jpg -font \"$font\" -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $exif/$tgt");
     $number++;
   }
   closedir(TL);
