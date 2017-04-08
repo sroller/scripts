@@ -16,6 +16,7 @@ if [ -d $INPUT_DIR ]; then
   echo INPUTDIR=$INPUT_DIR
   # insert-exif $OUTPUT_DIR tl*.jpg
   # process-tl-dir
+  mkdir -p $OUTPUT_DIR
   cd $OUTPUT_DIR
   TGTDATE=$(basename $INPUT_DIR)
   TGTDIR=/mnt/hennecke/timelapse/$(hostname)/$TGTDATE
