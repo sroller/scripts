@@ -9,7 +9,7 @@ echo -n create_movie $MOVIE ...
 if [ -z !$PID ]; then
 	ffmpeg -y -v error -r 30 -f image2 -i tl%06d.jpg -vf "hqdn3d=1.5:1.5:6:6" -an -preset slow -c:v libx265 -r 30 $MOVIE
 else
-	ffmpeg -y -v info -r 30 -f image2 -i tl%06d.jpg -vf "hqdn3d=1.5:1.5:6:6" - -an -preset superfast -c:v libx265 -r 30 $MOVIE
+	ffmpeg -y -v info -r 30 -f image2 -i tl%06d.jpg -vf "hqdn3d=1.5:1.5:6:6" -an -preset superfast -c:v libx265 -r 30 $MOVIE
 fi
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 echo finished in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
