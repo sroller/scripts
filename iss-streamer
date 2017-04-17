@@ -1,0 +1,6 @@
+#!/bin/bash
+while true
+do
+  livestreamer http://ustream.tv/channel/iss-hdev-payload mobile_480p --player omxplayer --fifo --player-args "--win \"0 0 1920 1080\" {filename}"
+done
+
