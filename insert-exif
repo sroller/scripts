@@ -29,7 +29,7 @@ while [ $# -ne 0 ]; do
 	if [ ! -f $TGTDIR/$1 ]
 	then
 		j=$(($j+1))
-		convert $1 -resize 1280x960 $1
+		# convert $1 -resize 1280x960 $1
 		if (($? != 0)); then
 			echo "$?: couldn't convert $1"
 		else
