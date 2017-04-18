@@ -71,10 +71,11 @@ foreach my $dir (sort(@dirs)) {
     my $tgt = sprintf("tl%06d.jpg", $number);
     print "convert $jpg to $exif/$tgt\n";
 		system("convert $dir/$jpg -font \"$font\" -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $exif/$tgt");
+		my @atime = (stat("$dir/$jpg"));
+		print $atime[8], $atime[9];
+		utime $atime[8], $atime[9], "$exif/$tgt";
     $number++;
   }
   closedir(TL);
   print "\n";
 }
-
-# vim:ts=2:sw=2:
