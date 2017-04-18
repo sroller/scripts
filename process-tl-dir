@@ -72,7 +72,6 @@ foreach my $dir (sort(@dirs)) {
     print "convert $jpg to $exif/$tgt\n";
 		system("convert $dir/$jpg -font \"$font\" -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $exif/$tgt");
 		my @atime = (stat("$dir/$jpg"));
-		print $atime[8], $atime[9];
 		utime $atime[8], $atime[9], "$exif/$tgt";
     $number++;
   }
