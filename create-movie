@@ -1,7 +1,7 @@
 #!/bin/bash
 
 START_TIME=$SECONDS
-# MOVIE=$(stat -c"%z" tl000001.jpg|cut -d " " -f1)-$(date +"%s")-movie.mp4
+# MOVIE=$(stat -c"%y" tl000001.jpg|cut -d " " -f1)-$(date +"%s")-movie.mp4
 MOVIE=$(stat -c"%z" tl000001.jpg|cut -d " " --output-delimiter=- -f1,2|cut -b1-19|sed s/:/-/g).mp4
 echo -n create_movie $MOVIE ... 
 
