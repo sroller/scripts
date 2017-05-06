@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ ! -z $1 ]; then
+  TIME=$1
+else
+  TIME=5
+fi
+
+FPS=30
+EX=auto
+WIDTH=1280
+HEIGHT=720
+FILE=vid-$(date +"%Y%m%d-%H%M%S")
+BITRATE=3500000
+MSEC=$((TIME * 1000))
+echo "record for $TIME seconds"
+raspivid -v -w $WIDTH -h $HEIGHT -a 12 -a "%d.%m.%Y %H:%M:%S" -st -n -fps $FPS -b $BITRATE -pf high -ex $EX -t $MSEC -o $FILE.h264
+echo "convert to $FILE.mp4"
+ffmpeg -y -v fatal -r $FPS -i $FILE.h264 -c:v copy -an $FILE.mp4
