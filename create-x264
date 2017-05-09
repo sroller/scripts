@@ -1,0 +1,14 @@
+#!/bin/bash
+
+START_TIME=$SECONDS
+MOVIE=$(stat -c"%y" tl000001.jpg|cut -d " " --output-delimiter=- -f1,2|cut -b1-10)-x264.mp4
+echo -n create_movie $MOVIE ... 
+
+# run faster if interactive
+if [ -z !$PID ]; then
+	ffmpeg -y -v error -r 30 -f image2 -i tl%06d.jpg -vf "hqdn3d=1.5:1.5:6:6" -an -preset slow -c:v libx264 -r 30 $MOVIE
+else
+	ffmpeg -y -v info -r 30 -f image2 -i tl%06d.jpg -vf "hqdn3d=1.5:1.5:6:6" -an -preset superfast -c:v libx264 -r 30 $MOVIE
+fi
+ELAPSED_TIME=$(($SECONDS - $START_TIME))
+echo finished in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
