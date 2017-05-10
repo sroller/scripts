@@ -96,7 +96,7 @@ then
         mkdir -p $DIR
         echo raspistill -w $WIDTH -h $HEIGHT -tl $TL $FLIP --thumb none -ex $EX -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
         raspistill -w $WIDTH -h $HEIGHT -tl $TL $FLIP --thumb none -ex $EX -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
-	ln -s ~steffenr/www/jq-galerie/galerie.html $DIR/galerie.html
+	ln -s ~steffenr/www/jq-galerie/galerie.html $DIR
         echo raspistill started
         echo stop with: timelapse stop
         echo output directory: $DIR
