@@ -15,6 +15,8 @@ if lsusb | grep -q "Ralink"; then
     logger -t "${0##*/}" up: $IP
   else
     logger -t "${0##*/}" "connection down! attempting reconnection"
+    echo "${0##*/}" "connection down! attempting reconnection"
+		ifconfig wlan0
     ifdown --force wlan0
     sleep 10
     ifup --force wlan0
