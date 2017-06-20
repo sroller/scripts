@@ -6,7 +6,7 @@ START_TIME=$SECONDS
 # defaults
 WIDTH=1024
 LOG_LEVEL=info
-BITRATE=2500
+BITRATE=2500k
 QUALITY=28
 TWOPASS=0
 FRAMERATE=24
@@ -27,6 +27,16 @@ if [ "-"  = "${1:0:1}" ]; then
 fi
 
 CODEC=$1
+if  [ $CODEC != "x264" ] && 
+	[ $CODEC != "x265" ] && 
+	[ $CODEC != "hevc" ] && 
+	[ $CODEC != "vp9" ]
+then
+	echo unknown codec
+	echo valid parameters are x264, x265, hevc, vp9
+	exit
+fi
+
 shift
 
 while getopts w:hv:q:b:2r:p: opt; do
@@ -43,7 +53,7 @@ while getopts w:hv:q:b:2r:p: opt; do
 			LOG_LEVEL=$OPTARG
 			;;
 		q)
-			echo quality for CRF
+			echo quality for CRF $OPTARG
 			QUALITY=$OPTARG
 			;;
 		b)
@@ -55,7 +65,7 @@ while getopts w:hv:q:b:2r:p: opt; do
 			TWOPASS=1
 			;;
 		r)
-			echo framerate $FRAMERATE
+			echo framerate $FRAMERATE fps
 			;;
 		p)
 			echo preset $OPTARG
@@ -68,68 +78,81 @@ done
 SIZING="-vf scale=$WIDTH:-1"
 OPT="-y -v $LOG_LEVEL -hide_banner"
 MOVIE=$FDATE-$CODEC-q$QUALITY-w$WIDTH-fr$FRAMERATE
+MAUTHOR="Steffen Roller <steffen.roller@gmail.com>" 
+MYEAR="(c) by Steffen Roller 2017" 
+MCOPY="Creative Commons License (BY)" 
+MDESC="codec:$CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps"
+MTITLE="$DATUM, Grand River Kitchener,ON"
+METADATA="-metadata title='$MTITLE'"
 
 case $CODEC in
 	x264)
-		ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-			   -vf "hqdn3d=1.5:1.5:6:6" -an -preset $PRESET -c:v libx264 \
-			   -metadata title="Timelapse $DATUM\\Grand River\\Kitchener, ON" \
-			   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
-			   -metadata year="(c) by Steffen Roller 2017" \
-			   -metadata copyright="Creative Commons License (BY)" \
-			   -metadata description="codec: $CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps" \
-			   -crf $QUALITY -r $FRAMERATE $MOVIE-$PRESET.mp4
+		if [ "$TWOPASS" = "1" ]; then
+			ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+				   -an -preset $PRESET -c:v libx264 \
+				   $SIZING \
+				   -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+				   -b:v $BITRATE -pass 1 -r $FRAMERATE -f mp4 /dev/null
+			MOVIE=$MOVIE-$PRESET-2pass.mp4
+			ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+				   -an -preset $PRESET -c:v libx264 \
+				   $SIZING \
+				   -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+				   -b:v $BITRATE -pass 2 -r $FRAMERATE $MOVIE
+		else # single pass
+			MOVIE=$MOVIE-$PRESET.mp4
+			ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+				   -an -preset $PRESET -c:v libx264 \
+				   $SIZING \
+				   -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+				   -crf $QUALITY -r $FRAMERATE $MOVIE
+		fi
 		;;
 	vp9)
 		if [ "$TWOPASS" = "1" ]; then
-			echo ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-				   -c:v libvpx-vp9 -pass 1 -b:v 0 \
-				   $SIZING \
-				   -crf $QUALITY -threads 8 -speed 4 -tile-columns 6 -frame-parallel 1 -an -f webm /dev/null 
 			ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
 				   -c:v libvpx-vp9 -pass 1 -b:v 0 \
 				   $SIZING \
 				   -crf $QUALITY -threads 8 -speed 4 -tile-columns 6 -frame-parallel 1 -an -f webm /dev/null 
+			MOVIE=$MOVIE-2pass.webm
 			ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg -c:v libvpx-vp9 -pass 2 -b:v 0 \
 				   $SIZING \
-				   -metadata title="Timelapse $DATUM\\Grand River\\Kitchener, ON" \
-				   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
-				   -metadata year="(c) by Steffen Roller 2017" \
-				   -metadata copyright="Creative Commons License (BY)" \
-				   -metadata description="codec: $CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps" \
-				   -crf $QUALITY -threads 8 -speed 1 -tile-columns 6 -frame-parallel 1 -auto-alt-ref 1 -lag-in-frames 25 -an -r $FRAMERATE -f webm $MOVIE-2pass.webm
+				   -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+				   -crf $QUALITY -threads 8 -speed 1 -tile-columns 6 -frame-parallel 1 -auto-alt-ref 1 -lag-in-frames 25 -an -r $FRAMERATE -f webm $MOVIE
 			rm ffmpeg2pass-0.log
 		else
-			ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg $SIZING \
-				   -metadata title="Timelapse $DATUM\\Grand River\\Kitchener, ON" \
-				   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
-				   -metadata year="(c) by Steffen Roller 2017" \
-				   -metadata copyright="Creative Commons License (BY)" \
-				   -metadata description="codec: $CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps" \
-				   -an -c:v libvpx-vp9 -crf $QUALITY -b:v 0 -r $FRAMERATE $MOVIE-1pass.webm
+			MOVIE=$MOVIE-1pass.webm
+			ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+				   $SIZING \
+				   -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+				   -an -c:v libvpx-vp9 -crf $QUALITY -b:v 0 -r $FRAMERATE $MOVIE
 		fi
 		;;
-	hevc)
-		echo ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-			   $SIZING \
-			   -metadata title="Timelapse $DATUM\nGrand River\nKitchener, ON" \
-			   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
-			   -metadata year="(c) by Steffen Roller 2017" \
-			   -metadata copyright="Creative Commons License (BY)" \
-			   -metadata description="codec: $CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps" \
-			   -an \
-			   -c:v libx265 -crf $QUALITY -r $FRAMERATE $MOVIE.mp4
-		ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-			   $SIZING \
-			   -metadata title="Timelapse $DATUM\nGrand River\nKitchener, ON" \
-			   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
-			   -metadata year="(c) by Steffen Roller 2017" \
-			   -metadata copyright="Creative Commons License (BY)" \
-			   -metadata description="codec: $CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps" \
-			   -an \
-			   -c:v libx265 -crf $QUALITY -r $FRAMERATE $MOVIE.mp4
+	hevc|x265)
+		MOVIE=$MOVIE-2pass.mp4
+		if [ "$TWOPASS" = "1" ]; then
+			ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+				   -an -c:v libx265 \
+				   $SIZING \
+				   -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+				   -b:v $BITRATE -pass 1 -r $FRAMERATE -f mp4 /dev/null
+			MOVIE=$MOVIE-$PRESET-2pass.mp4
+			ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+				   -an -c:v libx265 \
+				   $SIZING \
+				   -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+				   -b:v $BITRATE -pass 2 -r $FRAMERATE $MOVIE
+		else # single pass
+			ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+				   $SIZING \
+				   -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+				   -an \
+				   -c:v libx265 -crf $QUALITY -r $FRAMERATE $MOVIE
+		fi
 		;;
 esac
 
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
+echo output $MOVIE
 echo finished in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
+
