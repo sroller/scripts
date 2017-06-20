@@ -1,0 +1,135 @@
+#!/bin/bash
+#
+
+START_TIME=$SECONDS
+
+# defaults
+WIDTH=1024
+LOG_LEVEL=info
+BITRATE=2500
+QUALITY=28
+TWOPASS=0
+FRAMERATE=24
+PRESET=medium
+
+FDATE=$(stat -c"%y" tl000001.jpg|cut -b1-10)
+DATUM=$(stat -c"%y" tl000001.jpg|cut -b1-10|perl -npe "s/(\d+)\-(\d+)\-(\d+)/\3.\2.\1/")
+
+if [ -z $FDATE ]; then
+	echo "couldn't find tl000001.jpg"
+	echo "wrong directory?"
+	exit
+fi
+
+if [ "-"  = "${1:0:1}" ]; then
+	echo first parameter has to be x264, hevc or vp9
+	exit
+fi
+
+CODEC=$1
+shift
+
+while getopts w:hv:q:b:2r:p: opt; do
+	case $opt in
+		w)
+			echo "width" $OPTARG
+			WIDTH=$OPTARG
+			;;
+		h)
+			echo Help
+			;;
+		v)
+			echo log level $OPTARG
+			LOG_LEVEL=$OPTARG
+			;;
+		q)
+			echo quality for CRF
+			QUALITY=$OPTARG
+			;;
+		b)
+			echo bitrate $OPTARG
+			BITRATE=$OPTARG
+			;;
+		2)
+			echo two pass on
+			TWOPASS=1
+			;;
+		r)
+			echo framerate $FRAMERATE
+			;;
+		p)
+			echo preset $OPTARG
+			echo possible values: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
+			PRESET=$OPTARG
+	esac
+done
+
+# movie sizing independent from picture size
+SIZING="-vf scale=$WIDTH:-1"
+OPT="-y -v $LOG_LEVEL -hide_banner"
+MOVIE=$FDATE-$CODEC-q$QUALITY-w$WIDTH-fr$FRAMERATE
+
+case $CODEC in
+	x264)
+		ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+			   -vf "hqdn3d=1.5:1.5:6:6" -an -preset $PRESET -c:v libx264 \
+			   -metadata title="Timelapse $DATUM\\Grand River\\Kitchener, ON" \
+			   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
+			   -metadata year="(c) by Steffen Roller 2017" \
+			   -metadata copyright="Creative Commons License (BY)" \
+			   -metadata description="codec: $CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps" \
+			   -crf $QUALITY -r $FRAMERATE $MOVIE-$PRESET.mp4
+		;;
+	vp9)
+		if [ "$TWOPASS" = "1" ]; then
+			echo ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+				   -c:v libvpx-vp9 -pass 1 -b:v 0 \
+				   $SIZING \
+				   -crf $QUALITY -threads 8 -speed 4 -tile-columns 6 -frame-parallel 1 -an -f webm /dev/null 
+			ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+				   -c:v libvpx-vp9 -pass 1 -b:v 0 \
+				   $SIZING \
+				   -crf $QUALITY -threads 8 -speed 4 -tile-columns 6 -frame-parallel 1 -an -f webm /dev/null 
+			ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg -c:v libvpx-vp9 -pass 2 -b:v 0 \
+				   $SIZING \
+				   -metadata title="Timelapse $DATUM\\Grand River\\Kitchener, ON" \
+				   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
+				   -metadata year="(c) by Steffen Roller 2017" \
+				   -metadata copyright="Creative Commons License (BY)" \
+				   -metadata description="codec: $CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps" \
+				   -crf $QUALITY -threads 8 -speed 1 -tile-columns 6 -frame-parallel 1 -auto-alt-ref 1 -lag-in-frames 25 -an -r $FRAMERATE -f webm $MOVIE-2pass.webm
+			rm ffmpeg2pass-0.log
+		else
+			ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg $SIZING \
+				   -metadata title="Timelapse $DATUM\\Grand River\\Kitchener, ON" \
+				   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
+				   -metadata year="(c) by Steffen Roller 2017" \
+				   -metadata copyright="Creative Commons License (BY)" \
+				   -metadata description="codec: $CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps" \
+				   -an -c:v libvpx-vp9 -crf $QUALITY -b:v 0 -r $FRAMERATE $MOVIE-1pass.webm
+		fi
+		;;
+	hevc)
+		echo ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+			   $SIZING \
+			   -metadata title="Timelapse $DATUM\nGrand River\nKitchener, ON" \
+			   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
+			   -metadata year="(c) by Steffen Roller 2017" \
+			   -metadata copyright="Creative Commons License (BY)" \
+			   -metadata description="codec: $CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps" \
+			   -an \
+			   -c:v libx265 -crf $QUALITY -r $FRAMERATE $MOVIE.mp4
+		ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+			   $SIZING \
+			   -metadata title="Timelapse $DATUM\nGrand River\nKitchener, ON" \
+			   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
+			   -metadata year="(c) by Steffen Roller 2017" \
+			   -metadata copyright="Creative Commons License (BY)" \
+			   -metadata description="codec: $CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps" \
+			   -an \
+			   -c:v libx265 -crf $QUALITY -r $FRAMERATE $MOVIE.mp4
+		;;
+esac
+
+ELAPSED_TIME=$(($SECONDS - $START_TIME))
+echo finished in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
