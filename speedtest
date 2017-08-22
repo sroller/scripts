@@ -1,0 +1,4 @@
+#!/bin/bash
+
+/home/steffenr/src/speedtest-cli/speedtest.py --simple | mailx -r "Saturn <rpi142857@gmail.com>" -s "Speedtest $(date)" steffen.roller@gmail.com,sroller@opentext.com
+
