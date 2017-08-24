@@ -1,15 +1,38 @@
 #!/bin/bash
 
 START_TIME=$SECONDS
-QUALITY=26
-MOVIE=$(stat -c"%y" tl000001.jpg|cut -d " " --output-delimiter=- -f1,2|cut -b1-10)-q$QUALITY-hevc.mp4
+QUALITY=${Q:-25}
+WIDTH=${WIDTH:-1920}
+SIZING="-vf scale=$WIDTH:-1"
+OPT="-y -v info -hide_banner"
+STAT=$(stat -c"%y" tl000001.jpg|cut -b1-10|perl -npe "s/(\d+)\-(\d+)\-(\d+)/\3.\2.\1/")
+if [ -z $STAT ]; then
+	echo "couldn't find tl000001.jpg"
+	echo "wrong directory?"
+	exit
+fi
+
+MOVIE=$(stat -c"%y" tl000001.jpg|cut -d " " --output-delimiter=- -f1,2|cut -b1-10)-hevc-q$QUALITY.mp4
 echo -n create_movie $MOVIE ... 
 
 # run faster if interactive
 if [ -z !$PID ]; then
-	ffmpeg -y -v error -r 30 -f image2 -i tl%06d.jpg -vf "hqdn3d=1.5:1.5:6:6" -an -preset slow -c:v libx265 -crf $QUALITY -r 30 $MOVIE
+	ffmpeg $OPT -r 30 -f image2 -i tl%06d.jpg \
+		   -metadata title="$STAT Timelapse Grand River" \
+		   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
+		   -metadata year="2017" \
+		   -metadata copyright="Create Commons" \
+		   -an \
+	       -c:v libx265 -crf $QUALITY -r 30 $MOVIE
 else
-	ffmpeg -y -v info -r 30 -f image2 -i tl%06d.jpg -vf "hqdn3d=1.5:1.5:6:6" -an -preset superfast -c:v libx265 -crf $QUALITY -r 30 $MOVIE
+	ffmpeg $OPT -r 30 -f image2 -i tl%06d.jpg \
+		   $SIZING \
+		   -metadata title="$STAT Timelapse Grand River" \
+		   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
+		   -metadata year="2017" \
+		   -metadata copyright="Create Commons" \
+		   -an \
+		   -c:v libx265 -crf $QUALITY -r 30 $MOVIE
 fi
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 echo finished in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec

@@ -16,8 +16,10 @@
 
 use strict;
 use warnings;
+use POSIX;
+use Data::Dump qw(dump);
+use Getopt::Std;
 
-my $exif = "exif"; # output directory
 my $font;
 
 if ("$^O" eq "MSWin32") {
@@ -55,6 +57,13 @@ sub max_number($) {
 	return $max +0;
 }
 
+# accept start and end time in form HHMM
+my %opts;
+getopts('s:e:', \%opts);
+my $beginn = ($opts{'s'} || "0000") . "00";
+my $ende   = ($opts{'e'} || "2359") . "59";
+
+my $exif = "exif-$beginn-$ende"; # output directory
 mkdir $exif;
 my @dirs = get_dirs();
 my $number = max_number($exif) + 1;
@@ -65,6 +74,13 @@ foreach my $dir (sort(@dirs)) {
 	my @files = ();
 	while(my $jpg = readdir(TL)) {
 		next unless $jpg =~ /tl\d+.jpg$/;
+
+		my $date = POSIX::strftime("%H%M%S", localtime((stat "$dir/$jpg")[9]));
+
+		# print "$date >= $beginn && $date <= $ende?\n";
+		next unless ($date >= $beginn && $date <= $ende);
+		# print "$dir/$jpg ($date)\n";
+
 		push(@files, $jpg);
 	}
 	foreach my $jpg (sort(@files)) {

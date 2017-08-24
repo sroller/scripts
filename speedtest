@@ -1,4 +1,7 @@
 #!/bin/bash
 
-/home/steffenr/src/speedtest-cli/speedtest.py --simple | mailx -r "Saturn <rpi142857@gmail.com>" -s "Speedtest $(date)" steffen.roller@gmail.com,sroller@opentext.com
+
+SPEED=$(/home/steffenr/src/speedtest-cli/speedtest.py --csv)
+echo $SPEED >> ~/data/speedtest.csv
+echo $SPEED | mailx -r "Saturn <rpi142857@gmail.com>" -s "Speedtest $(date +'%d-%h-%Y %H:%M')" steffen.roller@gmail.com
 
