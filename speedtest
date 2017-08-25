@@ -1,7 +1,5 @@
 #!/bin/bash
 
 
-SPEED=$(/home/steffenr/src/speedtest-cli/speedtest.py --csv)
-echo $SPEED >> ~/data/speedtest.csv
-echo $SPEED | mailx -r "Saturn <rpi142857@gmail.com>" -s "Speedtest $(date +'%d-%h-%Y %H:%M')" steffen.roller@gmail.com
+speedtest.py --csv | tee -a ~/data/speedtest.csv | process_speedtest
 

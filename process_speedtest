@@ -1,0 +1,60 @@
+#!/usr/bin/env ruby
+#
+# reads CSV output from speedtest.py and 
+# a) saves it to local speedtest.csv file
+# b) sends a human readable emaill
+#
+require 'csv'
+require 'time'
+require 'awesome_print'
+require 'mail'
+require 'yaml'
+
+gcred = YAML.load_file("/home/steffenr/.gmail/cred.yml")
+
+data = ARGF.read
+(serverid, sponsor, name, timestamp, distance, ping, download, upload) = CSV.parse(data)[0]
+
+smtp_option = {
+	address: 'smtp.gmail.com',
+	port: 587,
+	domain: 'vineta.ca',
+	user_name: gcred[:user],
+	password: gcred[:password],
+	authentication: 'plain',
+	enable_starttls_auto: true
+}
+
+subject = "Speedtest #{Time.parse(timestamp).localtime.strftime('%d-%h-%Y %H:%M')}"
+
+text_body = <<"EOM"
+ping: #{'%.2f' % ping} ms
+download: #{'%.1f' % (download.to_f / 1024)} Mbit/s (#{'%.0f' % (download.to_f / (1024*8))} kb/s)
+upload: #{'%.1f' % (upload.to_f / 1024)} Mbit/s (#{'%.0f' % (upload.to_f / (1024*8))} kb/s)
+EOM
+
+# puts subject
+# puts text_body
+
+Mail.defaults do
+	delivery_method :smtp, smtp_option
+end
+
+Mail.deliver do
+	to 'steffen.roller@gmail.com'
+	from 'Saturn <rpi142857@gmail.com>'
+	subject subject
+	body text_body
+end
+
+
+=begin
+speed_data = CSV.read('/home/steffenr/data/speedtest.csv', headers: true)
+speed_data.each do |r|
+	# ap r
+	print Time.parse(r['Timestamp']).localtime.strftime("%d-%h-%Y %H:%M"), " "
+	printf "Ping: %.0f ms, ", r['Ping']
+	printf "Down: %.0f kb/s, ", r['Download'].to_f / (1024*8)
+	printf "up  : %.0f kb/s\n", r['Upload'].to_f / (1024*8)
+end
+=end
