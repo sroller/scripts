@@ -59,11 +59,14 @@ sub max_number($) {
 
 # accept start and end time in form HHMM
 my %opts;
-getopts('s:e:', \%opts);
+getopts('s:e:i:', \%opts);
 my $beginn = ($opts{'s'} || "0000") . "00";
 my $ende   = ($opts{'e'} || "2359") . "59";
 
-my $exif = "exif-$beginn-$ende"; # output directory
+# set mininum interval between pictures to <i> seconds
+my $interval = ($opts{'i'} || 0);
+
+my $exif = "exif-$beginn-$ende-i$interval"; # output directory
 mkdir $exif;
 my @dirs = get_dirs();
 my $number = max_number($exif) + 1;
@@ -72,14 +75,25 @@ foreach my $dir (sort(@dirs)) {
 	print "process dir=", $dir, "\n";
 	opendir(TL, $dir) or die $!;
 	my @files = ();
-	while(my $jpg = readdir(TL)) {
+	my $last_time = 0;
+	for my $jpg (sort readdir(TL)) {
 		next unless $jpg =~ /tl\d+.jpg$/;
 
-		my $date = POSIX::strftime("%H%M%S", localtime((stat "$dir/$jpg")[9]));
+		my $mtime = (stat("$dir/$jpg"))[9];
+		my $date = POSIX::strftime("%H%M%S", localtime($mtime));
 
 		# print "$date >= $beginn && $date <= $ende?\n";
 		next unless ($date >= $beginn && $date <= $ende);
 		# print "$dir/$jpg ($date)\n";
+
+		# only if this files has more than <interval> seconds distance to the former
+		# printf "$jpg: mtime=%s, last_time=%s, interval=$interval", POSIX::strftime("%H:%M:%S", localtime($mtime)), POSIX::strftime("%H:%M:%S", localtime($last_time));
+		if (($mtime - $last_time) > ($interval - 1)) {
+			# printf " <--- check\n";
+			$last_time = $mtime;
+		} else {
+			next; # skip this file
+		}
 
 		push(@files, $jpg);
 	}
@@ -98,4 +112,3 @@ foreach my $dir (sort(@dirs)) {
 	closedir(TL);
 	print "\n";
 }
-
