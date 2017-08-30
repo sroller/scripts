@@ -1,0 +1,37 @@
+#!/bin/bash
+#
+# chdir into $1
+# assume it's a timelapse directory
+# process directory with timelapse pictures
+# from tl000001.jpg to tl<maxnum>.jpg
+#
+# create a x265/hevc video fullsize HD in 1920x1080 with quality level 23
+# create a vp9 video sized 640x480 with max bitrate of 500kb for webstreaming
+# move the movie files to ~/movies
+# delete the directory
+
+if [ -z "$1" ]; then
+	echo need directory to chdir
+	echo exit
+	exit
+fi
+
+echo change dir to $1
+cd $1
+ls -l 
+
+# we're called like this
+# find -type d | egrep '.*/2017[[:digit:]]{4}$'|xargs -l process-exif-dir
+
+process-tl-dir -i 120
+cd exif*
+
+mkmov vp9 -w 1280 -b 500k -2
+mv -v *.webm ~/movies
+
+# mkmov hevc -w 640 -b 500k -2 
+# mv -v *.mp4 ~/movies
+
+cd ..
+rm -rf exif*
+
