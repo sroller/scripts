@@ -33,7 +33,6 @@ sub get_dirs {
 	my @dirs = ();
 	opendir(CWD, $cwd) or die $!;
 	while(my $dir = readdir(CWD)) {
-# print $dir, "\n";
 		next unless $dir =~ /\d{8}\-\d{4}/;
 		push(@dirs, $dir);
 	}
@@ -47,33 +46,16 @@ sub max_number($) {
 	my $jpg = "";
 	opendir(DIR, $dir) or die $!;
 	while (my $file = readdir(DIR)) {
-# print $file, "\n";
 		($jpg) = $file =~ m/(\d+).jpg$/;
 		next if !defined($jpg);
-# printf "%d\n", $jpg;
 		if ($jpg > $max) { $max = $jpg; }
 	}
 	closedir(DIR);
 	return $max +0;
 }
 
-# accept start and end time in form HHMM
-my %opts;
-getopts('s:e:i:', \%opts);
-my $beginn = ($opts{'s'} || "0000") . "00";
-my $ende   = ($opts{'e'} || "2359") . "59";
-
-# set mininum interval between pictures to <i> seconds
-my $interval = ($opts{'i'} || 0);
-
-my $exif = "exif-$beginn-$ende-i$interval"; # output directory
-mkdir $exif;
-my @dirs = get_dirs();
-my $number = max_number($exif) + 1;
-
-foreach my $dir (sort(@dirs)) {
-	print "process dir=", $dir, "\n";
-	opendir(TL, $dir) or die $!;
+sub collect_files {
+	my($dir, $beginn, $ende, $interval) = @_;
 	my @files = ();
 	my $last_time = 0;
 	for my $jpg (sort readdir(TL)) {
@@ -97,13 +79,43 @@ foreach my $dir (sort(@dirs)) {
 
 		push(@files, $jpg);
 	}
+	return @files;
+}
+
+# accept start and end time in form HHMM
+my %opts;
+getopts('s:e:i:v:', \%opts);
+my $beginn = ($opts{'s'} || "0000") . "00";
+my $ende   = ($opts{'e'} || "2359") . "59";
+my $verbose = ($opts{'v'} || 0);
+
+# we can read a list of files
+my $file_list = ($opts{'f'});
+
+# set mininum interval between pictures to <i> seconds
+my $interval = ($opts{'i'} || 0);
+
+my $exif = "exif-$beginn-$ende-i$interval"; # output directory
+mkdir $exif;
+my @dirs = get_dirs();
+my $number = max_number($exif) + 1;
+
+my @files = ();
+
+foreach my $dir (sort(@dirs)) {
+	print "process dir=", $dir, "\n" if ($verbose > 0);
+	opendir(TL, $dir) or die $!;
+	# collect all files
+	print "$dir, $beginn, $ende, $interval\n" if ($verbose > 1);
+	@files = collect_files($dir, $beginn, $ende, $interval);
 	foreach my $jpg (sort(@files)) {
-		my $tgt = sprintf("tl%06d.jpg", $number);
-		print "convert $jpg to $exif/$tgt\n";
-		my $rc = system("convert $dir/$jpg -font \"$font\" -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $exif/$tgt");
+		my $tgt = sprintf("$exif/tl%06d.jpg", $number);
+		my $src = "$dir/$jpg";
+		print "convert $src to $tgt\n" if ($verbose > 1);
+		my $rc = system("convert $src -font \"$font\" -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $tgt");
 		if ($rc == 0) {
-			my @atime = (stat("$dir/$jpg"));
-			utime $atime[8], $atime[9], "$exif/$tgt";
+			my @atime = (stat("$src"));
+			utime $atime[8], $atime[9], "$tgt";
 			$number++;
 		} else { # error
 			print "error converting file $tgt\n";
@@ -111,4 +123,18 @@ foreach my $dir (sort(@dirs)) {
 	}
 	closedir(TL);
 	print "\n";
+}
+
+exit;
+
+foreach my $file (@files) {
+	my %file = \$file;
+	my $rc = system("convert $file{'src'} -font \"$font\" -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $file{'tgt'}");
+	if ($rc == 0) {
+		my @atime = (stat("$file{'src'}"));
+		utime $atime[8], $atime[9], "$file{'tgt'}";
+		$number++;
+	} else { # error
+		print "error converting file $file{'tgt'}\n";
+	}
 }
