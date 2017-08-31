@@ -18,7 +18,6 @@ fi
 
 echo change dir to $1
 cd $1
-ls -l 
 
 # we're called like this
 # find -type d | egrep '.*/2017[[:digit:]]{4}$'|xargs -l process-exif-dir
@@ -26,11 +25,25 @@ ls -l
 process-tl-dir -i 120
 cd exif*
 
-mkmov vp9 -w 1280 -b 500k -2
-mv -v *.webm ~/movies
+mkmov vp9 -w 320 -q 23
+mkdir -p ~/movies/small
+mv -v *.webm ~/movies/small
 
-# mkmov hevc -w 640 -b 500k -2 
-# mv -v *.mp4 ~/movies
+mkmov vp9 -w 1280 -b 500k -2
+mkdir -p ~/movies/webm
+mv -v *.webm ~/movies/webm
+
+mkmov x264 -w 1280 -b 500k -2
+mkdir -p ~/movies/x264
+mv -v *.mp4 ~/movies/x264
+
+mkmov hevc -w 1280 -b 500k -2 
+mkdir -p ~/movies/x265
+mv -v *.mp4 ~/movies/x265
+
+mkmov hevc -w 1920
+mkdir -p ~/movies/hq
+mv -v *.mp4 ~/movies/hq
 
 cd ..
 rm -rf exif*
