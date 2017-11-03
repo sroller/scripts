@@ -19,6 +19,7 @@ use warnings;
 use POSIX;
 use Data::Dump qw(dump);
 use Getopt::Std;
+use Cwd qw(cwd getcwd);
 
 my $font;
 
@@ -44,7 +45,8 @@ sub max_number($) {
 	my ($dir) = @_;
 	my $max = 0;
 	my $jpg = "";
-	opendir(DIR, $dir) or die $!;
+	my $cwd = cwd;
+	opendir(DIR, $dir) or die "$!: $cwd/$dir";
 	while (my $file = readdir(DIR)) {
 		($jpg) = $file =~ m/(\d+).jpg$/;
 		next if !defined($jpg);
@@ -96,7 +98,7 @@ my $file_list = ($opts{'f'});
 my $interval = ($opts{'i'} || 0);
 
 my $exif = "exif-$beginn-$ende-i$interval"; # output directory
-mkdir $exif;
+mkdir $exif or die "$!: $exif";
 my @dirs = get_dirs();
 my $number = max_number($exif) + 1;
 
