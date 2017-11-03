@@ -168,14 +168,14 @@ case $CODEC in
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
            -an -c:v libx265 \
            $SIZING \
-           -b:v $BITRATE -pass 1 -r $FRAMERATE -f mp4 /dev/null
+           -b:v $BITRATE -x265-params pass=1 log-level=1 -r $FRAMERATE -f mp4 /dev/null
       MOVIE=$MOVIE-2pass.mp4
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
            -an -c:v libx265 \
            $SIZING \
            -movflags +faststart \
            -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
-           -b:v $BITRATE -pass 2 -r $FRAMERATE $MOVIE
+           -b:v $BITRATE -x265-params pass=2 -x265-params log-level=1 -r $FRAMERATE $MOVIE
     else # single pass
       MOVIE=$MOVIE.mp4
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
@@ -183,7 +183,7 @@ case $CODEC in
            -movflags +faststart \
            -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
            -an \
-           -c:v libx265 -crf $QUALITY -r $FRAMERATE $MOVIE
+           -c:v libx265 -crf $QUALITY -x265-params log-level=1 -r $FRAMERATE $MOVIE
     fi
     ;;
 esac
