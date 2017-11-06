@@ -20,6 +20,7 @@ use POSIX;
 use Data::Dump qw(dump);
 use Getopt::Std;
 use Cwd qw(cwd getcwd);
+use English;
 
 my $font;
 
@@ -64,11 +65,13 @@ sub collect_files {
 		next unless $jpg =~ /tl\d+.jpg$/;
 
 		my $mtime = (stat("$dir/$jpg"))[9];
-		my $date = POSIX::strftime("%H%M%S", localtime($mtime));
+		my $moment = POSIX::strftime("%H%M", localtime($mtime));
 
-		# print "$date >= $beginn && $date <= $ende?\n";
-		next unless ($date >= $beginn && $date <= $ende);
-		# print "$dir/$jpg ($date)\n";
+		# print "$moment >= $beginn && $moment <= $ende?\n";
+		if ($beginn ne "start" && $ende ne "ende") {
+			next unless ($moment >= $beginn && $moment <= $ende);
+		}
+		# print "$dir/$jpg ($moment)\n";
 
 		# only if this files has more than <interval> seconds distance to the former
 		# printf "$jpg: mtime=%s, last_time=%s, interval=$interval", POSIX::strftime("%H:%M:%S", localtime($mtime)), POSIX::strftime("%H:%M:%S", localtime($last_time));
@@ -87,8 +90,8 @@ sub collect_files {
 # accept start and end time in form HHMM
 my %opts;
 getopts('s:e:i:v:', \%opts);
-my $beginn = ($opts{'s'} || "0000") . "00";
-my $ende   = ($opts{'e'} || "2359") . "59";
+my $beginn = ($opts{'s'} || "start");
+my $ende   = ($opts{'e'} || "end");
 my $verbose = ($opts{'v'} || 0);
 
 # we can read a list of files
@@ -97,7 +100,7 @@ my $file_list = ($opts{'f'});
 # set mininum interval between pictures to <i> seconds
 my $interval = ($opts{'i'} || 0);
 
-my $exif = "exif-$beginn-$ende-i$interval"; # output directory
+my $exif = "exif-$beginn-$ende-i$interval-$PID"; # output directory
 mkdir $exif or die "$!: $exif";
 my @dirs = get_dirs();
 my $number = max_number($exif) + 1;
