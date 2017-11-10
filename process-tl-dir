@@ -92,7 +92,7 @@ my %opts;
 getopts('s:e:i:v:', \%opts);
 my $beginn = ($opts{'s'} || "start");
 my $ende   = ($opts{'e'} || "end");
-my $verbose = ($opts{'v'} || 0);
+my $verbose = ($opts{'v'} || 2);
 
 # we can read a list of files
 my $file_list = ($opts{'f'});
