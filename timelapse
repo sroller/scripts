@@ -23,10 +23,10 @@ function help {
 }
 
 # default parameter
-EX=auto
-TL=30000
-WIDTH=1280
-HEIGHT=720
+EX=night
+TL=60000
+WIDTH=1920
+HEIGHT=1080
 FLIP=
 
 while getopts ":nut:w:h:" opt; do
@@ -61,7 +61,7 @@ shift $((OPTIND-1))
 CMD=$1
 shift
 
-# echo raspistill -w $WIDTH -h $HEIGHT -ex $EX -tl $TL $CMD
+echo raspistill -w $WIDTH -h $HEIGHT -ex $EX -tl $TL $CMD
 
 
 PID=$(pgrep raspistill)
