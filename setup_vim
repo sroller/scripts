@@ -1,0 +1,16 @@
+#/bin/bash
+
+if [ "$EUID" -ne 0 ]
+then
+	echo "please run as root/sudo"
+	exit
+fi
+
+mkdir -p /etc/vim/colors
+curl https://raw.githubusercontent.com/altercation/vim-colors-solarized/master/colors/solarized.vim -o /etc/vim/colors/solarized.vim
+curl https://raw.githubusercontent.com/tomasr/molokai/master/colors/molokai.vim -o /etc/vim/colors/molokai.vim
+curl https://raw.githubusercontent.com/chriskempson/tomorrow-theme/master/vim/colors/Tomorrow.vim -o /etc/vim/colors/Tomorrow.vim
+curl https://raw.githubusercontent.com/chriskempson/tomorrow-theme/master/vim/colors/Tomorrow-Night.vim -o /etc/vim/colors/Tomorrow-Night.vim
+curl https://raw.githubusercontent.com/chriskempson/tomorrow-theme/master/vim/colors/Tomorrow-Night-Eighties.vim -o /etc/vim/colors/Tomorrow-Night-Eighties.vim
+curl https://raw.githubusercontent.com/chriskempson/tomorrow-theme/master/vim/colors/Tomorrow-Night-Bright.vim -o /etc/vim/colors/Tomorrow-Night-Bright.vim
+curl https://raw.githubusercontent.com/chriskempson/tomorrow-theme/master/vim/colors/Tomorrow-Night-Blue.vim -o /etc/vim/colors/Tomorrow-Night-Blue.vim
