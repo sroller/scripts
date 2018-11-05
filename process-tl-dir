@@ -1,146 +1,27 @@
-#!/usr/bin/env perl
-# 
-# process all subdirectories of the name NNNNNNNN-NNNN (YYYYMMDD-HHMM)
-#
-# pick up the invidual tl*.jpg files
-# from different restarts of the timelapse script due to reboots
-#
-# use 'convert' to overlay each picture with the ExifDateTime value
-#
-# store the results in directory $exif
-#
-# make sure the resulting files are numbered starting with tl000001.jpg without
-# a gap to prepare for the later creation of the timelapse video using
-# 'avconv' from the libav or ffmpeg project
-#
+#!/usr/bin/env ruby
 
-use strict;
-use warnings;
-use POSIX;
-use Data::Dump qw(dump);
-use Getopt::Std;
-use Cwd qw(cwd getcwd);
-use English;
+require 'csv'
+require 'fileutils'
 
-my $font;
-my $color = "White";
+CSV_DATA = File.dirname(__FILE__)+'/../data/weatherlog.csv'
+FONT = "Envy-Code-R"
 
-if ("$^O" eq "MSWin32") {
-	$font = "Envy-Code-R";
-} else {
-	$font = "EnvyCodeR";
-}
+source_dir = ARGV[0] || "."
+target_dir = (ARGV[1] || "." ) + "/exif-#{Process.pid}"
+FileUtils.mkdir_p target_dir
 
-sub get_dirs {
-	my $cwd = ".";
-	my @dirs = ();
-	opendir(CWD, $cwd) or die $!;
-	while(my $dir = readdir(CWD)) {
-		next unless $dir =~ /\d{8}\-\d{4}/;
-		push(@dirs, $dir);
-	}
-	closedir(CWD);
-	return @dirs;
-}
+wetter = CSV.read(CSV_DATA, { col_sep: ';', converters: :all, headers: true })
 
-sub max_number($) {
-	my ($dir) = @_;
-	my $max = 0;
-	my $jpg = "";
-	my $cwd = cwd;
-	opendir(DIR, $dir) or die "$!: $cwd/$dir";
-	while (my $file = readdir(DIR)) {
-		($jpg) = $file =~ m/(\d+).jpg$/;
-		next if !defined($jpg);
-		if ($jpg > $max) { $max = $jpg; }
-	}
-	closedir(DIR);
-	return $max +0;
-}
+jpgs = Dir["#{source_dir}/**/tl*.jpg"].sort
+puts "found #{jpgs.size}"
 
-sub collect_files {
-	my($dir, $beginn, $ende, $interval) = @_;
-	my @files = ();
-	my $last_time = 0;
-	for my $jpg (sort readdir(TL)) {
-		next unless $jpg =~ /tl\d+.jpg$/;
-
-		my $mtime = (stat("$dir/$jpg"))[9];
-		my $moment = POSIX::strftime("%H%M", localtime($mtime));
-
-		# print "$moment >= $beginn && $moment <= $ende?\n";
-		if ($beginn ne "start" && $ende ne "ende") {
-			next unless ($moment >= $beginn && $moment <= $ende);
-		}
-		# print "$dir/$jpg ($moment)\n";
-
-		# only if this files has more than <interval> seconds distance to the former
-		# printf "$jpg: mtime=%s, last_time=%s, interval=$interval", POSIX::strftime("%H:%M:%S", localtime($mtime)), POSIX::strftime("%H:%M:%S", localtime($last_time));
-		if (($mtime - $last_time) > ($interval - 1)) {
-			# printf " <--- check\n";
-			$last_time = $mtime;
-		} else {
-			next; # skip this file
-		}
-
-		push(@files, $jpg);
-	}
-	return @files;
-}
-
-# accept start and end time in form HHMM
-my %opts;
-getopts('s:e:i:v:', \%opts);
-my $beginn = ($opts{'s'} || "start");
-my $ende   = ($opts{'e'} || "end");
-my $verbose = ($opts{'v'} || 2);
-
-# we can read a list of files
-my $file_list = ($opts{'f'});
-
-# set mininum interval between pictures to <i> seconds
-my $interval = ($opts{'i'} || 0);
-
-my $exif = "exif-$beginn-$ende-i$interval-$PID"; # output directory
-mkdir $exif or die "$!: $exif";
-my @dirs = get_dirs();
-my $number = max_number($exif) + 1;
-
-my @files = ();
-
-foreach my $dir (sort(@dirs)) {
-	print "process dir=", $dir, "\n" if ($verbose > 0);
-	opendir(TL, $dir) or die $!;
-	# collect all files
-	print "$dir, $beginn, $ende, $interval\n" if ($verbose > 1);
-	@files = collect_files($dir, $beginn, $ende, $interval);
-	foreach my $jpg (sort(@files)) {
-		my $tgt = sprintf("$exif/tl%06d.jpg", $number);
-		my $src = "$dir/$jpg";
-		print "convert $src to $tgt\n" if ($verbose > 1);
-		my $rc = system("convert $src -font \"$font\" -gravity NorthEast -pointsize 24 -fill $color -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $tgt");
-		if ($rc == 0) {
-			my @atime = (stat("$src"));
-			utime $atime[8], $atime[9], "$tgt";
-			$number++;
-		} else { # error
-			print "error converting file $tgt\n";
-		}
-	}
-	closedir(TL);
-	print "\n";
-}
-
-exit;
-
-foreach my $file (@files) {
-	my %file = \$file;
-	my $rc = system("convert $file{'src'} -font \"$font\" -gravity SouthEast -pointsize 24 -fill $color -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $file{'tgt'}");
-	if ($rc == 0) {
-		my @atime = (stat("$file{'src'}"));
-		utime $atime[8], $atime[9], "$file{'tgt'}";
-		$number++;
-	} else { # error
-		print "error converting file $file{'tgt'}\n";
-	}
-}
+# jpgs.first(5) do |jpg|
+jpgs.each_with_index do |jpg,index|
+  s = `identify -format "%[EXIF:DateTimeOriginal]" #{jpg}`
+  timestamp = DateTime.strptime(s, '%Y:%m:%d %H:%M:%S')
+  # puts timestamp.strftime("%Y-%m-%d %H:%M")
+  (moment, temperature, wind) = wetter.find {|w| timestamp < w['time']}
+  # puts "#{timestamp.strftime("%Y-%m-%d %H:%M")}, #{moment}, #{temperature}, #{wind}"
+  puts "convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+36 \"temp: #{"%.1f" % temperature[1]}c wind: #{"%.1f" % wind[1]} km/h\" #{target_dir}/tl#{'%06d' % index}.jpg"
+  `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+36 \"temp: #{"%.1fc" % temperature[1]} wind: #{"%.1f km/h" % wind[1]}\" #{target_dir}/tl#{'%06d' % index}.jpg`
+end
