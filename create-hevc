@@ -20,7 +20,7 @@ if [ -z !$PID ]; then
 	ffmpeg $OPT -r 30 -f image2 -i tl%06d.jpg \
 		   -metadata title="$STAT Timelapse Grand River" \
 		   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
-		   -metadata year="2017" \
+		   -metadata year="2018" \
 		   -metadata copyright="Create Commons" \
 		   -an \
 	       -c:v libx265 -crf $QUALITY -r 30 $MOVIE
@@ -29,7 +29,7 @@ else
 		   $SIZING \
 		   -metadata title="$STAT Timelapse Grand River" \
 		   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
-		   -metadata year="2017" \
+		   -metadata year="2018" \
 		   -metadata copyright="Create Commons" \
 		   -an \
 		   -c:v libx265 -crf $QUALITY -r 30 $MOVIE
