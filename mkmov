@@ -1,6 +1,8 @@
 #!/bin/bash
 #
 
+renice -n 10 $$
+
 START_TIME=$SECONDS
 
 # defaults
@@ -11,6 +13,8 @@ QUALITY=23
 TWOPASS=0
 FRAMERATE=30
 PRESET=medium
+
+THREADS=4
 
 if [ "-"  = "${1:0:1}" ]; then
   echo first parameter has to be iphone, x264, hevc or vp9
@@ -75,7 +79,7 @@ while getopts w:hv:q:b:2r:p:i: opt; do
       TWOPASS=1
       ;;
     r)
-	  FRAMERATE=$OPTARG
+      FRAMERATE=$OPTARG
       ;;
     p)
       echo possible values: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
@@ -96,12 +100,12 @@ echo two pass       : $TWOPASS
 # movie sizing independent from picture size
 SIZING="-vf scale=$WIDTH:-1"
 OPT="-y -v $LOG_LEVEL -hide_banner"
-MOVIE=$FDATE-$CODEC-q$QUALITY-w$WIDTH-fr$FRAMERATE
+MOVIE=$FDATE-$CODEC-q$QUALITY-b$BITRATE-w$WIDTH-fr$FRAMERATE
 MAUTHOR="Steffen Roller <steffen.roller@gmail.com>" 
-MYEAR="(c) by Steffen Roller 2017" 
+MYEAR="(c) by Steffen Roller $(date +%Y)" 
 MCOPY="Creative Commons License (BY)" 
 MDESC="codec:$CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps"
-MTITLE="$DATUM, Grand River Kitchener, ON"
+MTITLE="$DATUM, Kitchener, ON"
 METADATA="-metadata title='$MTITLE'"
 
 case $CODEC in
@@ -146,13 +150,13 @@ case $CODEC in
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
            -c:v libvpx-vp9 -pass 1 -b:v $BITRATE \
            $SIZING \
-           -crf $QUALITY -threads 8 -speed 4 -tile-columns 6 -frame-parallel 1 -an -f webm /dev/null 
+           -crf $QUALITY -threads $THREADS -speed 4 -tile-columns 6 -frame-parallel 1 -an -f webm /dev/null 
       MOVIE=$MOVIE-2pass.webm
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg -c:v libvpx-vp9 -pass 2 -b:v $BITRATE \
            $SIZING \
            -movflags +faststart \
            -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
-           -crf $QUALITY -threads 8 -speed 1 -tile-columns 6 -frame-parallel 1 -auto-alt-ref 1 -lag-in-frames 25 -an -r $FRAMERATE -f webm $MOVIE
+           -crf $QUALITY -threads $THREADS -speed 1 -tile-columns 6 -frame-parallel 1 -auto-alt-ref 1 -lag-in-frames 25 -an -r $FRAMERATE -f webm $MOVIE
       rm ffmpeg2pass-0.log
     else
       MOVIE=$MOVIE-1pass.webm
@@ -168,22 +172,22 @@ case $CODEC in
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
            -an -c:v libx265 \
            $SIZING \
-           -b:v $BITRATE -x265-params pass=1 log-level=1 -r $FRAMERATE -f mp4 /dev/null
-      MOVIE=$MOVIE-2pass.mp4
+           -b:v $BITRATE -preset $PRESET -threads $THREADS -x265-params pass=1:log-level=1 -r $FRAMERATE -f mp4 /dev/null
+      MOVIE=$MOVIE-$PRESET-2pass.mp4
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
            -an -c:v libx265 \
            $SIZING \
            -movflags +faststart \
            -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
-           -b:v $BITRATE -x265-params pass=2 -x265-params log-level=1 -r $FRAMERATE $MOVIE
+           -b:v $BITRATE -preset $PRESET -threads $THREADS -x265-params pass=2:log-level=1 -r $FRAMERATE $MOVIE
     else # single pass
-      MOVIE=$MOVIE.mp4
+      MOVIE=$MOVIE-$PRESET-1pass.mp4
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
            $SIZING \
            -movflags +faststart \
            -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
            -an \
-           -c:v libx265 -crf $QUALITY -x265-params log-level=1 -r $FRAMERATE $MOVIE
+           -c:v libx265 -crf $QUALITY -preset $PRESET -threads $THREADS -x265-params log-level=1 -r $FRAMERATE $MOVIE
     fi
     ;;
 esac
