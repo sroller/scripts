@@ -12,6 +12,13 @@
 
 MOVIES=${MOVIES:-~/movies}
 LOGLEVEL=${LOGLEVEL:-error}
+INTERVAL=${INTERVAL:-120} # in seconds
+RATE=${RATE:-30} # frame rate 25 PAL, 30 NTSC
+
+echo "effective paramaters:"
+echo "MOVIES=$MOVIES"
+echo "INTERVAL=$INTERVAL"
+echo "RATE=$RATE"
 
 if [ -z "$1" ]; then
 	echo error: no parameter given!
@@ -34,7 +41,7 @@ MONTH=$(date -d "$(basename $(pwd))" +"%m-%B")
 # we're called like this
 # find -type d | egrep '.*/2017[[:digit:]]{4}$'|xargs -l create-24h-movie
 
-process-tl-dir -i 120 -v 0
+process-tl-dir -i $INTERVAL -v 0
 
 if [ $? -ne 0 ]; then
 	echo "couldn't process pictures"
@@ -46,24 +53,24 @@ EXIF=$(find -type d -name 'exif-*' -cmin -10 -printf '%f')
 cd $EXIF
 
 mkdir -p $MOVIES/$MONTH/small/{webm,hevc}
-mkmov vp9 -w 640 -q 26 -b 500k -2 -v $LOGLEVEL -r 25
+mkmov vp9 -w 640 -q 26 -b 500k -2 -v $LOGLEVEL -r $RATE
 mv -v *.webm $MOVIES/$MONTH/small/webm
-mkmov hevc -w 640 -b 500k -2 -v $LOGLEVEL -r 25
+mkmov hevc -w 640 -b 500k -2 -v $LOGLEVEL -r $RATE
 mv -v *.mp4 $MOVIES/$MONTH/small/hevc
 
-mkmov vp9 -w 1920 -b 3500k -2 -v $LOGLEVEL -r 25
+mkmov vp9 -w 1920 -b 3500k -2 -v $LOGLEVEL -r $RATE
 mkdir -p $MOVIES/$MONTH/webm
 mv -v *.webm $MOVIES/$MONTH/webm
 
-#mkmov x264 -w 1920 -b 3500k -2 -v $LOGLEVEL -r 25
-#mkdir -p $MOVIES/$MONTH/x264
-#mv -v *.mp4 $MOVIES/$MONTH/x264
+mkmov x264 -w 1920 -b 3500k -2 -v $LOGLEVEL -r $RATE
+mkdir -p $MOVIES/$MONTH/x264
+mv -v *.mp4 $MOVIES/$MONTH/x264
 
-mkmov hevc -w 1920 -b 3500k -2  -v $LOGLEVEL -r 25
+mkmov hevc -w 1920 -b 3500k -2  -v $LOGLEVEL -r $RATE
 mkdir -p $MOVIES/$MONTH/x265
 mv -v *.mp4 $MOVIES/$MONTH/x265
 
-mkmov hevc -w 1920 -v $LOGLEVEL -r 25
+mkmov hevc -w 1920 -v $LOGLEVEL -r $RATE
 mkdir -p $MOVIES/$MONTH/hq
 mv -v *.mp4 $MOVIES/$MONTH/hq
 
