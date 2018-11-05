@@ -28,8 +28,8 @@ subject = "Speedtest #{Time.parse(timestamp).localtime.strftime('%d-%h-%Y %H:%M'
 
 text_body = <<"EOM"
 ping: #{'%.2f' % ping} ms
-download: #{'%.1f' % (download.to_f / 1024)} Mbit/s (#{'%.0f' % (download.to_f / (1024*8))} kb/s)
-upload: #{'%.1f' % (upload.to_f / 1024)} Mbit/s (#{'%.0f' % (upload.to_f / (1024*8))} kb/s)
+download: #{'%.1f' % (download.to_f / 1024)} Mbit/s (#{'%.0f' % (download.to_f / (1024*8))} KB/s)
+upload: #{'%.1f' % (upload.to_f / 1024)} Mbit/s (#{'%.0f' % (upload.to_f / (1024*8))} KB/s)
 EOM
 
 # puts subject
