@@ -1,7 +1,9 @@
 #!/bin/bash
 
-cd ~/timelapse
-create-24h-movie $(date +%Y%m%d)
+# set -x
+
+cd ~/timelapse/river
+INTERVAL=60 INTERVAL=120 create-24h-movie $(date +%Y%m%d)
 cd -
-# cd ~/www/pi/timelapse
-# MOVIES=~/movies/pi create-24h-movie $(date +%Y%m%d)
+cd /sdb/home/pi1/timelapse/timelapse
+MOVIES=/sdb/home/pi1/timelapse/movies INTERVAL=120 create-24h-movie $(date +%Y%m%d)
