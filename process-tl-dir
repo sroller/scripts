@@ -23,6 +23,7 @@ use Cwd qw(cwd getcwd);
 use English;
 
 my $font;
+my $color = "White";
 
 if ("$^O" eq "MSWin32") {
 	$font = "Envy-Code-R";
@@ -117,7 +118,7 @@ foreach my $dir (sort(@dirs)) {
 		my $tgt = sprintf("$exif/tl%06d.jpg", $number);
 		my $src = "$dir/$jpg";
 		print "convert $src to $tgt\n" if ($verbose > 1);
-		my $rc = system("convert $src -font \"$font\" -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $tgt");
+		my $rc = system("convert $src -font \"$font\" -gravity NorthEast -pointsize 24 -fill $color -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $tgt");
 		if ($rc == 0) {
 			my @atime = (stat("$src"));
 			utime $atime[8], $atime[9], "$tgt";
@@ -134,7 +135,7 @@ exit;
 
 foreach my $file (@files) {
 	my %file = \$file;
-	my $rc = system("convert $file{'src'} -font \"$font\" -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $file{'tgt'}");
+	my $rc = system("convert $file{'src'} -font \"$font\" -gravity SouthEast -pointsize 24 -fill $color -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $file{'tgt'}");
 	if ($rc == 0) {
 		my @atime = (stat("$file{'src'}"));
 		utime $atime[8], $atime[9], "$file{'tgt'}";
