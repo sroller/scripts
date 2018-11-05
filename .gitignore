@@ -1,1 +1,5 @@
 Gemfile.lock
+drip
+inlein
+*.swp
+.nrepl-history
