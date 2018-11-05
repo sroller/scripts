@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+#
+require 'awesome_print'
+require 'fileutils'
+require 'optparse'
+
+
+def parse_cmdline_options
+	options = {interval: 120, color: "White"}
+	OptionParser.new do |opts|
+		opts.banner = "Usage: create-monthly-movie [options]"
+
+		opts.on("-i", "--interval [SECONDS]", Integer, "Interval in seconds (default: 120)") do |interval|
+			options[:interval] = interval
+		end
+	end.parse!
+	return options
+end
+
+options = parse_cmdline_options
+interval = options[:interval]
+
+last_time = 0
+tl = Dir["**/2*/**/tl??????.jpg"]
+tl_movie = []
+tl.sort.each do |j|
+	f = File::Stat.new(j)
+	if f.mtime.to_i >= last_time + interval - 1
+		# puts "#{j} #{f.mtime} #{f.mtime.to_i}"
+		tl_movie << j
+		last_time = f.mtime.to_i
+	end
+end
+
+font ="EnvyCodeR"
+color = "White"
+tgtdir = "exif-#{interval}"
+FileUtils.mkdir_p(tgtdir)
+fnum = 0
+tl_movie.sort.each do |src|
+	tgt = "#{tgtdir}/#{"tl%06d.jpg" % fnum}"
+	cmd = "convert #{src} -font \"#{font}\" -gravity NorthEast -pointsize 24 -fill #{color} -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" #{tgt}"
+	warn cmd
+	rc = system(cmd)
+	if $?.success?
+		fnum += 1
+	else
+		warn "error detected, fileno not increased"
+	end
+end
+
