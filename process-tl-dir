@@ -1,18 +1,78 @@
 #!/usr/bin/env ruby
 
+# 
+# 1. read directory with jpgs
+# 2. extract datetime from first and last
+# 3. load the weather data for this timeframe
+#
 require 'csv'
 require 'fileutils'
+require 'date'
+require 'awesome_print'
 
-CSV_DATA = File.dirname(__FILE__)+'/../data/weatherlog.csv'
-FONT = "Envy-Code-R"
+class Weather
+  CSV_DATA = '/var/lib/weather/uwaterloo/hobo_15minutedate_2018.csv'
+  
+  # data points are pegged to 0/15/30/45 minutes
+  def normalize_instant(datum)
+    minute = (datum.minute / 15) * 15
+    # puts DateTime.new(datum.year, datum.month, datum.day, datum.hour, minute, 0)
+    DateTime.new(datum.year, datum.month, datum.day, datum.hour, minute, 0)
+  end
+
+  def initialize(from_timestamp, to_timestamp)
+    @weather = {}
+
+    from_timestamp = (normalize_instant(from_timestamp))
+    to_timestamp = (normalize_instant(to_timestamp))
+    # puts "reading data from #{from_timestamp} to #{to_timestamp}"
+    CSV.foreach(CSV_DATA, { converters: :all, headers: true }) do |row|
+      inst = DateTime.new(row['year'], row['month'], row['day'], row['hour'], row['minute'], 0)
+      if inst >= from_timestamp && inst <= to_timestamp
+        @weather[inst] = {temperature: row['Temperature'],
+                          wind: row['Wind Speed - Average 2.0'],
+                          precipitation: row['Precipitation - Tipping Bucket']}
+      end
+    end
+  end
+
+  def temperature(inst)
+    @weather[normalize_instant(inst)][:temperature]
+  end
+
+  def wind(inst)
+    @weather[normalize_instant(inst)][:wind]
+  end
+
+  def precipitation(inst)
+    @weather[normalize_instant(inst)][:precipitation]
+  end
+end
+
+def exif_time(jpg)
+  s = `identify -format "%[EXIF:DateTimeOriginal]" #{jpg}`
+  DateTime.strptime(s, '%Y:%m:%d %H:%M:%S')
+end
 
 source_dir = ARGV[0] || "."
 target_dir = (ARGV[1] || "." ) + "/exif-#{Process.pid}"
+jpgs = Dir["#{source_dir}/**/tl*.jpg"].sort
+tag = Weather.new(exif_time(jpgs[0]), exif_time(jpgs[-1]))
+
+=begin
+ap jpgs[0]
+ap jpgs[-1]
+
+(0..1000).step(76).each {|i| puts tag.temperature(exif_time(jpgs[i]))} 
+exit
+=end
+
+
+FONT = "Envy-Code-R"
+
 FileUtils.mkdir_p target_dir
 
-wetter = CSV.read(CSV_DATA, { col_sep: ';', converters: :all, headers: true })
 
-jpgs = Dir["#{source_dir}/**/tl*.jpg"].sort
 puts "found #{jpgs.size}"
 
 # jpgs.first(5) do |jpg|
@@ -20,8 +80,10 @@ jpgs.each_with_index do |jpg,index|
   s = `identify -format "%[EXIF:DateTimeOriginal]" #{jpg}`
   timestamp = DateTime.strptime(s, '%Y:%m:%d %H:%M:%S')
   # puts timestamp.strftime("%Y-%m-%d %H:%M")
-  (moment, temperature, wind) = wetter.find {|w| timestamp < w['time']}
+  temperature = tag.temperature(timestamp)
+  wind = tag.wind(timestamp)
   # puts "#{timestamp.strftime("%Y-%m-%d %H:%M")}, #{moment}, #{temperature}, #{wind}"
-  puts "convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+36 \"temp: #{"%.1f" % temperature[1]}c wind: #{"%.1f" % wind[1]} km/h\" #{target_dir}/tl#{'%06d' % index}.jpg"
-  `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+36 \"temp: #{"%.1fc" % temperature[1]} wind: #{"%.1f km/h" % wind[1]}\" #{target_dir}/tl#{'%06d' % index}.jpg`
+  puts "#{jpg} #{timestamp.strftime("%Y-%m-%d %H:%M")} #{"%.1f" % temperature}°C #{"%.1f" % wind} km/h #{target_dir}/tl#{'%06d' % index}.jpg"
+  `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+38 \"temp: #{"%.1f" % temperature}°C\" -annotate +12+64 \"wind: #{"%.1f km/h" % wind}\" #{target_dir}/tl#{'%06d' % index}.jpg`
 end
+
