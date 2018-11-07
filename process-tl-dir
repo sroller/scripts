@@ -82,8 +82,10 @@ jpgs.each_with_index do |jpg,index|
   # puts timestamp.strftime("%Y-%m-%d %H:%M")
   temperature = tag.temperature(timestamp)
   wind = tag.wind(timestamp)
-  # puts "#{timestamp.strftime("%Y-%m-%d %H:%M")}, #{moment}, #{temperature}, #{wind}"
-  puts "#{jpg} #{timestamp.strftime("%Y-%m-%d %H:%M")} #{"%.1f" % temperature}°C #{"%.1f" % wind} km/h #{target_dir}/tl#{'%06d' % index}.jpg"
-  `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+38 \"temp: #{"%.1f" % temperature}°C\" -annotate +12+64 \"wind: #{"%.1f km/h" % wind}\" #{target_dir}/tl#{'%06d' % index}.jpg`
+  ftime = File.stat(jpg)
+  target_jpg = "#{target_dir}/tl#{'%06d' % index}.jpg"
+  puts "#{jpg} #{timestamp.strftime("%Y-%m-%d %H:%M")} #{"%.1f" % temperature}°C #{"%.1f" % wind} km/h #{target_jpg}"
+  `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+38 \"temp: #{"%.1f" % temperature}°C\" -annotate +12+64 \"wind: #{"%.1f km/h" % wind}\" #{target_jpg}`
+  File.utime(ftime.atime, ftime.mtime, target_jpg)
 end
 
