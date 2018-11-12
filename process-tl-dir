@@ -9,6 +9,8 @@ require 'csv'
 require 'fileutils'
 require 'date'
 require 'awesome_print'
+require 'optparse'
+require 'optparse/time'
 
 class Weather
   CSV_DATA = '/var/lib/weather/uwaterloo/hobo_15minutedate_2018.csv'
@@ -36,16 +38,30 @@ class Weather
     end
   end
 
+  def messwert(inst, messreihe)
+    begin
+      wert = @weather[normalize_instant(inst)][messreihe]
+      if wert.nil?
+        wert = -9999.99
+      end
+    rescue StandardError => e
+      puts e
+      puts "inst=#{inst}, messreihe=#{messreihe}"
+      wert = -9999.99
+    end
+    wert
+  end
+
   def temperature(inst)
-    @weather[normalize_instant(inst)][:temperature]
+    messwert(inst, :temperature)
   end
 
   def wind(inst)
-    @weather[normalize_instant(inst)][:wind]
+    messwert(inst, :wind)
   end
 
   def precipitation(inst)
-    @weather[normalize_instant(inst)][:precipitation]
+    messwert(inst, :precipitation)
   end
 end
 
@@ -54,28 +70,70 @@ def exif_time(jpg)
   DateTime.strptime(s, '%Y:%m:%d %H:%M:%S')
 end
 
-source_dir = ARGV[0] || "."
-target_dir = (ARGV[1] || "." ) + "/exif-#{Process.pid}"
+options = {target_dir: '.',
+           source_dir: '.',
+           interval: 0,
+           start_time: '000000',
+           end_time: '235959'
+}
+
+$verbose = 1
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: process-tl-dir [options]"
+  opts.on('-i', '--interval seconds', 'Interval in seconds, default: 0') do |interval|
+    options[:interval] = interval
+  end
+
+  opts.on('-v', '--verbose [LEVEL]', 'logging on or off') do |verbose|
+    $verbose = verbose
+  end
+
+  opts.on('-s', '--start [IME]', 'Start time HH:MM') do |start|
+    if start =~ /([02][0-9]):([05][0-9])/
+      options[:start_time] = "#{$~[1]}#{$~[2]}00"
+    else
+      STDERR.puts "time format HH:MM"
+      exit
+    end
+  end
+
+  opts.on('-e', '--end [TIME]', 'End time HH:MM') do |ende|
+    if ende =~ /([02][0-9]):([05][0-9])/
+      options[:end_time] = "#{$~[1]}#{$~[2]}00"
+    else
+      STDERR.puts "time format HH:MM"
+      exit
+    end
+  end
+
+  opts.on('-h', '--help', 'displays help') do
+    puts opts
+    exit
+  end
+end.parse!
+
+ap options if $verbose
+
+source_dir = options[:source_dir]
+target_dir = options[:target_dir]
+interval = options[:interval]
+start_time = options[:start_time]
+end_time = options[:end_time]
+
+target_dir = "#{target_dir}/exif-#{Process.pid}"
+puts "source dir = #{source_dir}" if $verbose
 jpgs = Dir["#{source_dir}/**/tl*.jpg"].sort
+puts "found #{jpgs.size} jpgs" if $verbose
+
 tag = Weather.new(exif_time(jpgs[0]), exif_time(jpgs[-1]))
-
-=begin
-ap jpgs[0]
-ap jpgs[-1]
-
-(0..1000).step(76).each {|i| puts tag.temperature(exif_time(jpgs[i]))} 
-exit
-=end
-
 
 FONT = "Envy-Code-R"
 
 FileUtils.mkdir_p target_dir
 
+puts "found #{jpgs.size}" if $verbose
 
-puts "found #{jpgs.size}"
-
-# jpgs.first(5) do |jpg|
 jpgs.each_with_index do |jpg,index|
   s = `identify -format "%[EXIF:DateTimeOriginal]" #{jpg}`
   timestamp = DateTime.strptime(s, '%Y:%m:%d %H:%M:%S')
@@ -84,7 +142,7 @@ jpgs.each_with_index do |jpg,index|
   wind = tag.wind(timestamp)
   ftime = File.stat(jpg)
   target_jpg = "#{target_dir}/tl#{'%06d' % index}.jpg"
-  puts "#{jpg} #{timestamp.strftime("%Y-%m-%d %H:%M")} #{"%.1f" % temperature}°C #{"%.1f" % wind} km/h #{target_jpg}"
+  puts "#{jpg} #{timestamp.strftime("%Y-%m-%d %H:%M")} #{"%.1f" % temperature}°C #{"%.1f" % wind} km/h #{target_jpg}" if $verbose
   `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+38 \"temp: #{"%.1f" % temperature}°C\" -annotate +12+64 \"wind: #{"%.1f km/h" % wind}\" #{target_jpg}`
   File.utime(ftime.atime, ftime.mtime, target_jpg)
 end
