@@ -136,14 +136,19 @@ puts "found #{jpgs.size}" if $verbose
 
 jpgs.each_with_index do |jpg,index|
   s = `identify -format "%[EXIF:DateTimeOriginal]" #{jpg}`
-  timestamp = DateTime.strptime(s, '%Y:%m:%d %H:%M:%S')
-  # puts timestamp.strftime("%Y-%m-%d %H:%M")
-  temperature = tag.temperature(timestamp)
-  wind = tag.wind(timestamp)
-  ftime = File.stat(jpg)
-  target_jpg = "#{target_dir}/tl#{'%06d' % index}.jpg"
-  puts "#{jpg} #{timestamp.strftime("%Y-%m-%d %H:%M")} #{"%.1f" % temperature}°C #{"%.1f" % wind} km/h #{target_jpg}" if $verbose
-  `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+38 \"temp: #{"%.1f" % temperature}°C\" -annotate +12+64 \"wind: #{"%.1f km/h" % wind}\" #{target_jpg}`
-  File.utime(ftime.atime, ftime.mtime, target_jpg)
+  if $? == 0
+    timestamp = DateTime.strptime(s, '%Y:%m:%d %H:%M:%S')
+    # puts timestamp.strftime("%Y-%m-%d %H:%M")
+    temperature = tag.temperature(timestamp)
+    wind = tag.wind(timestamp)
+    ftime = File.stat(jpg)
+    target_jpg = "#{target_dir}/tl#{'%06d' % index}.jpg"
+    puts "#{jpg} #{timestamp.strftime("%Y-%m-%d %H:%M")} #{"%.1f" % temperature}°C #{"%.1f" % wind} km/h #{target_jpg}" if $verbose
+    `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+38 \"temp: #{"%.1f" % temperature}°C\" -annotate +12+64 \"wind: #{"%.1f km/h" % wind}\" #{target_jpg}`
+    File.utime(ftime.atime, ftime.mtime, target_jpg)
+  else
+    puts "#{jpg} cannot be read"
+    break
+  end
 end
 
