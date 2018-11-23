@@ -13,28 +13,27 @@ require 'optparse'
 require 'optparse/time'
 
 class Weather
-  CSV_DATA = '/var/lib/weather/uwaterloo/hobo_15minutedate_2018.csv'
+  CSV_DATA_DIR = '/var/lib/weather/goc'
   
   # data points are pegged to 0/15/30/45 minutes
   def normalize_instant(datum)
-    minute = (datum.minute / 15) * 15
+    # minute = (datum.minute / 15) * 15
     # puts DateTime.new(datum.year, datum.month, datum.day, datum.hour, minute, 0)
-    DateTime.new(datum.year, datum.month, datum.day, datum.hour, minute, 0)
+    DateTime.new(datum.year, datum.month, datum.day, datum.hour, 0, 0).strftime('%Y-%m-%dT%H:%M:%S')
   end
 
-  def initialize(from_timestamp, to_timestamp)
-    @weather = {}
+  def initialize(year, month)
+    
+    @weather = Hash.new({temperature: -999.9, wind: 0.0})
+    csv_file = "#{CSV_DATA_DIR}/weather-#{'%04d' % year}-#{'%02d' % month}.csv"
 
-    from_timestamp = (normalize_instant(from_timestamp))
-    to_timestamp = (normalize_instant(to_timestamp))
+    # from_timestamp = (normalize_instant(from_timestamp))
+    # to_timestamp = (normalize_instant(to_timestamp))
     # puts "reading data from #{from_timestamp} to #{to_timestamp}"
-    CSV.foreach(CSV_DATA, { converters: :all, headers: true }) do |row|
-      inst = DateTime.new(row['year'], row['month'], row['day'], row['hour'], row['minute'], 0)
-      if inst >= from_timestamp && inst <= to_timestamp
-        @weather[inst] = {temperature: row['Temperature'],
-                          wind: row['Wind Speed - Average 2.0'],
-                          precipitation: row['Precipitation - Tipping Bucket']}
-      end
+    CSV.foreach(csv_file, { converters: :all, col_sep: ';'}) do |row|
+      inst = row[0]
+      @weather[inst] = {temperature: row[1],
+                        wind: row[2]}
     end
   end
 
@@ -77,7 +76,7 @@ options = {target_dir: '.',
            end_time: '235959'
 }
 
-$verbose = 1
+$verbose = 0
 
 OptionParser.new do |opts|
   opts.banner = "Usage: process-tl-dir [options]"
@@ -113,7 +112,7 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-ap options if $verbose
+ap options if $verbose > 0
 
 source_dir = options[:source_dir]
 target_dir = options[:target_dir]
@@ -122,17 +121,17 @@ start_time = options[:start_time]
 end_time = options[:end_time]
 
 target_dir = "#{target_dir}/exif-#{Process.pid}"
-puts "source dir = #{source_dir}" if $verbose
+puts "source dir = #{source_dir}" if $verbose > 0
 jpgs = Dir["#{source_dir}/**/tl*.jpg"].sort
-puts "found #{jpgs.size} jpgs" if $verbose
+puts "found #{jpgs.size} jpgs" if $verbose > 0
 
-tag = Weather.new(exif_time(jpgs[0]), exif_time(jpgs[-1]))
+tag = Weather.new(exif_time(jpgs[0]).year, exif_time(jpgs[0]).month)
 
 FONT = "Envy-Code-R"
 
 FileUtils.mkdir_p target_dir
 
-puts "found #{jpgs.size}" if $verbose
+puts "found #{jpgs.size}" if $verbose > 0
 
 index=0
 jpgs.each do |jpg|
@@ -144,7 +143,7 @@ jpgs.each do |jpg|
     wind = tag.wind(timestamp)
     ftime = File.stat(jpg)
     target_jpg = "#{target_dir}/tl#{'%06d' % index}.jpg"
-    puts "#{jpg} #{timestamp.strftime("%Y-%m-%d %H:%M")} #{"%.1f" % temperature}°C #{"%.1f" % wind} km/h #{target_jpg}" if $verbose
+    puts "#{jpg} #{timestamp.strftime("%Y-%m-%d %H:%M")} #{"%.1f" % temperature}°C #{"%.1f" % wind} km/h #{target_jpg}" if $verbose > 0
     `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+38 \"temp: #{"%.1f" % temperature}°C\" -annotate +12+64 \"wind: #{"%.1f km/h" % wind}\" #{target_jpg}`
     File.utime(ftime.atime, ftime.mtime, target_jpg)
     index += 1
