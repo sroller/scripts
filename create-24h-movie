@@ -14,6 +14,11 @@ MOVIES=${MOVIES:-~/movies}
 LOGLEVEL=${LOGLEVEL:-error}
 INTERVAL=${INTERVAL:-120} # in seconds
 RATE=${RATE:-30} # frame rate 25 PAL, 30 NTSC
+if [ -z "$PS1" ]; then # running interactive
+  VERBOSE=1
+else
+  VERBOSE=0
+fi
 
 echo "effective paramaters:"
 echo "MOVIES=$MOVIES"
@@ -41,7 +46,7 @@ MONTH=$(date -d "$(basename $(pwd))" +"%m-%B")
 # we're called like this
 # find -type d | egrep '.*/2017[[:digit:]]{4}$'|xargs -l create-24h-movie
 
-process-tl-dir -i $INTERVAL -v 0
+process-tl-dir -i $INTERVAL -v $VERBOSE
 
 if [ $? -ne 0 ]; then
 	echo "couldn't process pictures"

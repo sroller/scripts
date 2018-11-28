@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ -z "$PS1" ]; then
+  echo "running interactive"
+fi
+
 cd ~timelapse/timelapse/river
 echo $(pwd)
 INTERVAL=120 create-24h-movie $(date -d "yesterday" +%Y%m%d)

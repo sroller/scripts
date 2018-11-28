@@ -84,8 +84,9 @@ OptionParser.new do |opts|
     options[:interval] = interval
   end
 
-  opts.on('-v', '--verbose [LEVEL]', 'logging on or off') do |verbose|
+  opts.on('-v', '--verbose [LEVEL]', Integer, 'logging on or off') do |verbose|
     $verbose = verbose
+    puts $verbose
   end
 
   opts.on('-s', '--start [IME]', 'Start time HH:MM') do |start|
