@@ -12,6 +12,8 @@ require 'awesome_print'
 require 'optparse'
 require 'optparse/time'
 
+$verbose=0
+
 class Weather
   CSV_DATA_DIR = '/var/lib/weather/goc'
   
@@ -29,11 +31,12 @@ class Weather
 
     # from_timestamp = (normalize_instant(from_timestamp))
     # to_timestamp = (normalize_instant(to_timestamp))
-    # puts "reading data from #{from_timestamp} to #{to_timestamp}"
+    puts "reading data from #{csv_file}"
     CSV.foreach(csv_file, { converters: :all, col_sep: ';'}) do |row|
       inst = row[0]
       @weather[inst] = {temperature: row[1],
                         wind: row[2]}
+      puts row[1], row[2]
     end
   end
 
@@ -76,8 +79,6 @@ options = {target_dir: '.',
            end_time: '235959'
 }
 
-$verbose = 0
-
 OptionParser.new do |opts|
   opts.banner = "Usage: process-tl-dir [options]"
   opts.on('-i', '--interval seconds', 'Interval in seconds, default: 0') do |interval|
@@ -85,8 +86,7 @@ OptionParser.new do |opts|
   end
 
   opts.on('-v', '--verbose [LEVEL]', Integer, 'logging on or off') do |verbose|
-    $verbose = verbose
-    puts $verbose
+    $verbose=verbose || 1
   end
 
   opts.on('-s', '--start [IME]', 'Start time HH:MM') do |start|
@@ -126,11 +126,23 @@ puts "source dir = #{source_dir}" if $verbose > 0
 jpgs = Dir["#{source_dir}/**/tl*.jpg"].sort
 puts "found #{jpgs.size} jpgs" if $verbose > 0
 
+unless jpgs.size > 0
+  STDERR.puts "not jpgs found in source dir #{source_dir}"
+  exit 1
+end
+
+puts "process year=#{exif_time(jpgs[0]).year}, month=#{exif_time(jpgs[0]).month}" if $verbose > 0
 tag = Weather.new(exif_time(jpgs[0]).year, exif_time(jpgs[0]).month)
+puts "tag=#{tag}" if $verbose > 0
 
 FONT = "Envy-Code-R"
 
-FileUtils.mkdir_p target_dir
+begin
+  FileUtils.mkdir_p target_dir
+rescue StandardError => e
+  STDERR.puts "#{target_dir}: #{e}"
+  exit 1
+end
 
 puts "found #{jpgs.size}" if $verbose > 0
 

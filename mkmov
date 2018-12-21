@@ -1,7 +1,11 @@
 #!/bin/bash
 #
 
-renice -n 10 $$
+if [ -n "$DEBUG" ]; then
+  set -x
+fi
+
+renice -n 10 $$      # reduce priority
 
 START_TIME=$SECONDS
 
@@ -21,18 +25,17 @@ if [ "-"  = "${1:0:1}" ]; then
   exit
 fi
 
-if [ "-"  = "${1:0:1}" ]; then
-  echo first parameter has to be x264, hevc or vp9
-  exit
-fi
-
 CODEC=$1
 if  [ "$CODEC" != "iphone" ]; then
-	FDATE=$(stat -c"%y" tl000001.jpg|cut -b1-10)
-	DATUM=$(stat -c"%y" tl000001.jpg|cut -b1-10|perl -npe "s/(\d+)\-(\d+)\-(\d+)/\3.\2.\1/")
-	# echo "couldn't find tl000001.jpg"
-	# echo "wrong directory?"
-	# exit
+    stat tl000001.jpg
+  if [ $? -eq 0 ]; then
+    FDATE=$(stat -c"%y" tl000001.jpg 2> /dev/null |cut -b1-10)
+    DATUM=$(stat -c"%y" tl000001.jpg 2> /dev/null |cut -b1-10|perl -npe "s/(\d+)\-(\d+)\-(\d+)/\3.\2.\1/")
+  else
+    echo "couldn't find tl000001.jpg"
+    echo "wrong directory?"
+    exit
+  fi
 fi
 
 if  [ "$CODEC" == "iphone" ]; then

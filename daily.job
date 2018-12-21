@@ -1,7 +1,9 @@
 #!/bin/bash
 
+set -x
+
 if [ -z "$PS1" ]; then
-  echo "running interactive"
+  echo "running non-interactive"
 fi
 
 cd ~timelapse/timelapse/river
@@ -11,3 +13,4 @@ cd -
 cd ~timelapse/timelapse/street
 echo $(pwd)
 INTERVAL=120 MOVIES=~timelapse/pi1/movies create-24h-movie $(date -d "yesterday" +%Y%m%d)
+

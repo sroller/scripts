@@ -21,3 +21,4 @@ do echo file \'$line\' >> mylist.txt
 done
 ffmpeg -f concat -safe 0 -i mylist.txt -c copy $MONTH-month$EXT
 echo monthnly movie in $MONTH-month$EXT
+rm mylist.txt

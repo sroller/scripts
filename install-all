@@ -1,3 +1,3 @@
 #!/bin/sh
 
-sudo install -Cv -g staff create-24h-movie hourly.job daily.job monthly.job fill-gaps copy-to-hennecke move-to-hennecke create-foto-index send-ip-addr foto day-or-night cpu-data check-wifi timelapse insert-exif create-vp9 create-x264 create-hevc mkmov geo-coord geo-coord wrap-timelapse process-tl-dir record-movie /usr/local/bin
+sudo install -Cv -g staff create-archive create-24h-movie hourly.job daily.job monthly.job fill-gaps copy-to-hennecke move-to-hennecke create-foto-index send-ip-addr foto day-or-night cpu-data check-wifi timelapse insert-exif create-vp9 create-x264 create-hevc mkmov geo-coord geo-coord wrap-timelapse process-tl-dir record-movie /usr/local/bin

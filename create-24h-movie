@@ -10,14 +10,17 @@
 # move the movie files to ~/movies
 # delete the directory
 
+set -x
+
 MOVIES=${MOVIES:-~/movies}
-LOGLEVEL=${LOGLEVEL:-error}
 INTERVAL=${INTERVAL:-120} # in seconds
+LOGLEVEL=${LOGLEVEL:-error}
 RATE=${RATE:-30} # frame rate 25 PAL, 30 NTSC
-if [ -z "$PS1" ]; then # running interactive
+VERBOSE=${VERBOSE:0} 
+
+if [ "$VERBOSE" = "0" ]; then
   VERBOSE=1
-else
-  VERBOSE=0
+  LOGLEVEL=info
 fi
 
 echo "effective paramaters:"
@@ -48,8 +51,11 @@ MONTH=$(date -d "$(basename $(pwd))" +"%m-%B")
 
 process-tl-dir -i $INTERVAL -v $VERBOSE
 
-if [ $? -ne 0 ]; then
-	echo "couldn't process pictures"
+rc=$?
+
+if [ $rc -ne 0 ]; then
+  echo "process-tl-dir returned $rc"
+  echo "$(pwd): couldn't process pictures"
 	exit
 fi
 
