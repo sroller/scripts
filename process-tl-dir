@@ -21,7 +21,9 @@ class Weather
   def normalize_instant(datum)
     # minute = (datum.minute / 15) * 15
     # puts DateTime.new(datum.year, datum.month, datum.day, datum.hour, minute, 0)
-    DateTime.new(datum.year, datum.month, datum.day, datum.hour, 0, 0).strftime('%Y-%m-%dT%H:%M:%S')
+    instant = DateTime.new(datum.year, datum.month, datum.day, datum.hour, 0, 0).strftime('%Y-%m-%dT%H:%M:%S')
+    # STDERR.puts "(in normalize_instant) datum=#{datum}, instant=#{instant}"
+    # instant
   end
 
   def initialize(year, month)
@@ -34,21 +36,25 @@ class Weather
     puts "reading data from #{csv_file}"
     CSV.foreach(csv_file, { converters: :all, col_sep: ';'}) do |row|
       inst = row[0]
+
       @weather[inst] = {temperature: row[1],
                         wind: row[2]}
-      puts row[1], row[2]
+      # STDERR.puts "setting value: @weather['#{inst}'] { temperature: #{row[1]}, wind: #{row[2]} }"
     end
+    ap @weather
   end
 
   def messwert(inst, messreihe)
+    # STDERR.puts "(in messwert) inst=#{normalize_instant(inst)}, messreihe=#{messreihe}"
     begin
       wert = @weather[normalize_instant(inst)][messreihe]
       if wert.nil?
+        # STDERR.puts "#{normalize_instant(inst)}/#{messreihe}: no data"
         wert = -9999.99
       end
     rescue StandardError => e
       puts e
-      puts "inst=#{inst}, messreihe=#{messreihe}"
+      # STDERR.puts "inst=#{normalize_instant(inst)}, messreihe=#{messreihe}"
       wert = -9999.99
     end
     wert
@@ -113,6 +119,7 @@ OptionParser.new do |opts|
   end
 end.parse!
 
+puts "running script #{File.expand_path(__FILE__)}" if $verbose > 0
 ap options if $verbose > 0
 
 source_dir = options[:source_dir]
