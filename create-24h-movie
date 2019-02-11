@@ -59,28 +59,36 @@ if [ $rc -ne 0 ]; then
 	exit
 fi
 
+# TODO: nur zum debuggen
+# echo "exit prematurily"
+# exit
+
 # find really the latest exif-*
 EXIF=$(find -type d -name 'exif-*' -cmin -10 -printf '%f')
 cd $EXIF
 
 mkdir -p $MOVIES/$MONTH/small/{webm,hevc}
-mkmov vp9 -w 640 -q 26 -b 500k -2 -v $LOGLEVEL -r $RATE
-mv -v *.webm $MOVIES/$MONTH/small/webm
-mkmov hevc -w 640 -b 500k -2 -v $LOGLEVEL -r $RATE
-mv -v *.mp4 $MOVIES/$MONTH/small/hevc
+#mkmov vp9 -w 640 -q 26 -b 500k -2 -v $LOGLEVEL -r $RATE
+#mv -v *.webm $MOVIES/$MONTH/small/webm
+#mkmov hevc -w 640 -b 500k -2 -v $LOGLEVEL -r $RATE
+#mv -v *.mp4 $MOVIES/$MONTH/small/hevc
 
+# zuerst, geht am schnellsten
+mkmov x264 -w 1920 -b 3500k -v $LOGLEVEL -r $RATE
+mkdir -p $MOVIES/$MONTH/x264
+mv -v *.mp4 $MOVIES/$MONTH/x264
+
+#
 mkmov vp9 -w 1920 -b 3500k -2 -v $LOGLEVEL -r $RATE
 mkdir -p $MOVIES/$MONTH/webm
 mv -v *.webm $MOVIES/$MONTH/webm
 
-mkmov x264 -w 1920 -b 3500k -2 -v $LOGLEVEL -r $RATE
-mkdir -p $MOVIES/$MONTH/x264
-mv -v *.mp4 $MOVIES/$MONTH/x264
-
+#
 mkmov hevc -w 1920 -b 3500k -2  -v $LOGLEVEL -r $RATE
 mkdir -p $MOVIES/$MONTH/x265
 mv -v *.mp4 $MOVIES/$MONTH/x265
 
+#
 mkmov hevc -w 1920 -v $LOGLEVEL -r $RATE
 mkdir -p $MOVIES/$MONTH/hq
 mv -v *.mp4 $MOVIES/$MONTH/hq
