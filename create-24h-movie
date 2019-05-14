@@ -10,23 +10,25 @@
 # move the movie files to ~/movies
 # delete the directory
 
-set -x
+# tracing
+# set -x
 
 MOVIES=${MOVIES:-~/movies}
 INTERVAL=${INTERVAL:-120} # in seconds
 LOGLEVEL=${LOGLEVEL:-error}
 RATE=${RATE:-30} # frame rate 25 PAL, 30 NTSC
-VERBOSE=${VERBOSE:0} 
+VERBOSE=${VERBOSE:-0} 
 
 if [ "$VERBOSE" = "0" ]; then
-  VERBOSE=1
+  # VERBOSE=1
   LOGLEVEL=info
+else
+  echo "effective paramaters:"
+  echo "MOVIES=$MOVIES"
+  echo "INTERVAL=$INTERVAL"
+  echo "RATE=$RATE"
+  echo "VERBOSE=$VERBOSE"
 fi
-
-echo "effective paramaters:"
-echo "MOVIES=$MOVIES"
-echo "INTERVAL=$INTERVAL"
-echo "RATE=$RATE"
 
 if [ -z "$1" ]; then
 	echo error: no parameter given!
@@ -58,10 +60,6 @@ if [ $rc -ne 0 ]; then
   echo "$(pwd): couldn't process pictures"
 	exit
 fi
-
-# TODO: nur zum debuggen
-# echo "exit prematurily"
-# exit
 
 # find really the latest exif-*
 EXIF=$(find -type d -name 'exif-*' -cmin -10 -printf '%f')

@@ -33,7 +33,7 @@ class Weather
 
     # from_timestamp = (normalize_instant(from_timestamp))
     # to_timestamp = (normalize_instant(to_timestamp))
-    puts "reading data from #{csv_file}"
+    puts "reading data from #{csv_file}" if $verbose > 0
     CSV.foreach(csv_file, { converters: :all, col_sep: ';'}) do |row|
       inst = row[0]
 
@@ -41,7 +41,7 @@ class Weather
                         wind: row[2]}
       # STDERR.puts "setting value: @weather['#{inst}'] { temperature: #{row[1]}, wind: #{row[2]} }"
     end
-    ap @weather
+    # ap @weather
   end
 
   def messwert(inst, messreihe)
