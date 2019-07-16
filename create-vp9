@@ -1,6 +1,7 @@
 #!/bin/bash
 
 START_TIME=$SECONDS
+YEAR=$(date +"%Y")
 QUALITY=${Q:-28}
 SIZING="-vf scale=1920:-1"
 OPT="-y -v info -hide_banner"
@@ -16,14 +17,14 @@ else
 		   $SIZING \
 		   -metadata title="Timelapse Grand River view, Kitchener, ON" \
 		   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
-		   -metadata year="2017" \
+		   -metadata year="$YEAR" \
 		   -metadata copyright="Create Commons" \
 		   -crf $QUALITY -threads 8 -speed 4 -tile-columns 6 -frame-parallel 1 -an -f webm /dev/null 
 	ffmpeg $OPT -r 30 -f image2 -i tl%06d.jpg -c:v libvpx-vp9 -pass 2 -b:v 0 \
 		   $SIZING \
 		   -metadata title="Timelapse Grand River view, Kitchener, ON" \
 		   -metadata author="Steffen Roller <steffen.roller@gmail.com>" \
-		   -metadata year="2017" \
+		   -metadata year="$YEAR" \
 		   -metadata copyright="Create Commons" \
 		   -crf $QUALITY -threads 8 -speed 1 -tile-columns 6 -frame-parallel 1 -auto-alt-ref 1 -lag-in-frames 25 -an -f webm $MOVIE
 	rm ffmpeg2pass-0.log
