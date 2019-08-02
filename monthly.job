@@ -20,6 +20,12 @@ echo "#file list for concatenation" > mylist.txt
 do echo file \'$line\' >> mylist.txt
 done
 ffmpeg -f concat -safe 0 -i mylist.txt -c copy $MONTH-month$EXT
-ffmpeg -i $MONTH-month$EXT -i ~timelapse/archive/movies/sound/alles.webm -c copy -shortest $MONTH-sound$EXT
+if [ "$EXT" == ".webm" ]
+then
+  ffmpeg -i $MONTH-month$EXT -i ~timelapse/archive/movies/sound/alles.webm -c copy -shortest $MONTH-sound$EXT
+else
+  # assuming mp4
+  ffmpeg -i $MONTH-month$EXT -i ~timelapse/archive/movies/sound/alles.mp3 -c copy -shortest $MONTH-sound$EXT
+fi
 echo monthnly movie in $MONTH-month$EXT
 rm mylist.txt
