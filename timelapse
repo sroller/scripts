@@ -9,13 +9,13 @@ function help {
   SCRIPT=${0##*/}
   echo
   if [ ! -z "$PID" ]; then
-    echo "     raspistill is running $(hostname)"
+    echo "     raspistill is running on host $(hostname)"
     echo "     PID: $PID"
     echo "     output to $(cat ~/tmp/timelapse.dir)"
     echo
     echo "     type '$SCRIPT stop' to end timelapse recording"
   else
-	  echo "     raspistill is not running on $(hostname)"
+	  echo "     raspistill is not running on host $(hostname)"
     echo
     echo "     type '$SCRIPT start' to begin timelapse"
   fi
