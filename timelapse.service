@@ -1,0 +1,12 @@
+[Unit]
+After=nfs.mount
+
+[Service]
+ExecStart=/usr/local/bin/timelapse -t 60000 -n start
+Type=forking
+User=timelapse
+Group=timelapse
+
+[Install]
+WantedBy=network-online.target
+
