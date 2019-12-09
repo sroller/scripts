@@ -6,7 +6,7 @@ mkdir -p $WWWDIR
 FOTO=$WWWDIR/`date --utc +%Y-%m-%d-%H-%M-%S`.jpg
 # raspistill -n -w 1280 -h 720 -t 1 `/root/bin/tag_oder_nacht.rb` -o $FOTO
 # raspistill -n -w 1280 -h 720 -t 500 -o $FOTO $*
-echo -n "Taking picture, "
+echo -n "Taking picture $FOTO, "
 raspistill -n `day-or-night` -t 2000 -o $FOTO $*
 echo -n "inserting date and time, "
 # ln --symbolic --force $FOTO $WWWDIR/last.jpg

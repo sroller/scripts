@@ -1,0 +1,201 @@
+#!/bin/bash
+#
+
+if [ -n "$DEBUG" ]; then
+  set -x
+fi
+
+renice -n 10 $$      # reduce priority
+
+START_TIME=$SECONDS
+
+# defaults
+WIDTH=1920
+LOG_LEVEL=info
+BITRATE=500k
+QUALITY=23
+TWOPASS=0
+FRAMERATE=30
+PRESET=medium
+
+THREADS=4
+
+if [ "-"  = "${1:0:1}" ]; then
+  echo first parameter has to be iphone, x264, hevc or vp9
+  exit
+fi
+
+CODEC=$1
+if  [ "$CODEC" != "iphone" ]; then
+    stat tl000001.jpg
+  if [ $? -eq 0 ]; then
+    FDATE=$(stat -c"%y" tl000001.jpg 2> /dev/null |cut -b1-10)
+    DATUM=$(stat -c"%y" tl000001.jpg 2> /dev/null |cut -b1-10|perl -npe "s/(\d+)\-(\d+)\-(\d+)/\3.\2.\1/")
+  else
+    echo "couldn't find tl000001.jpg"
+    echo "wrong directory?"
+    exit
+  fi
+fi
+
+if  [ "$CODEC" == "iphone" ]; then
+	FDATE=$(stat -c"%y" $2|cut -b1-10)
+	DATUM=$(stat -c"%y" $2|cut -b1-10|perl -npe "s/(\d+)\-(\d+)\-(\d+)/\3.\2.\1/")
+	echo $FDATE
+	echo $DATUM
+fi
+
+if  [ "$CODEC" != "x264" ] && 
+  [ "$CODEC" != "x265" ] && 
+  [ "$CODEC" != "hevc" ] && 
+  [ "$CODEC" != "iphone" ] &&  # not really a codec though
+  [ "$CODEC" != "vp9" ]
+then
+  echo unknown codec
+  echo valid parameters are x264, x265, iphone, hevc, vp9
+  exit
+fi
+
+shift
+
+while getopts w:hv:q:b:2r:p:i: opt; do
+  case $opt in
+    i)
+      INPUT=$OPTARG
+      ;;
+    w)
+      WIDTH=$OPTARG
+      ;;
+    h)
+      echo Help
+      ;;
+    v)
+      LOG_LEVEL=$OPTARG
+      ;;
+    q)
+      QUALITY=$OPTARG
+      ;;
+    b)
+      BITRATE=$OPTARG
+      ;;
+    2)
+      TWOPASS=1
+      ;;
+    r)
+      FRAMERATE=$OPTARG
+      ;;
+    p)
+      echo possible values: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
+      PRESET=$OPTARG
+  esac
+done
+
+# log effective parameters
+echo input file     : $INPUT
+echo width          : $WIDTH
+echo log level      : $LOG_LEVEL
+echo quality for CRF: $QUALITY
+echo bitrate        : $BITRATE
+echo framerate      : $FRAMERATE fps
+echo preset         : $PRESET
+echo two pass       : $TWOPASS
+
+# movie sizing independent from picture size
+SIZING="-vf scale=$WIDTH:-1"
+OPT="-y -v $LOG_LEVEL -hide_banner"
+MOVIE=$FDATE-$CODEC-q$QUALITY-b$BITRATE-w$WIDTH-fr$FRAMERATE
+MAUTHOR="Steffen Roller <steffen.roller@gmail.com>" 
+MYEAR="(c) by Steffen Roller $(date +%Y)" 
+MCOPY="Creative Commons License (BY)" 
+MDESC="codec:$CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps"
+MTITLE="$DATUM, Kitchener, ON"
+METADATA="-metadata title='$MTITLE'"
+
+case $CODEC in
+  iphone)
+    PRESET=veryslow
+    MOVIE=$(basename $INPUT .MTS)-iphone.mp4
+    ffmpeg $OPT -i $INPUT \
+         -c:a copy \
+         -preset $PRESET -c:v libx264 \
+         -x264-params ref=4 \
+         -movflags +faststart \
+         -vf "scale=-2:720:flags=lanczos" \
+         -crf $QUALITY $MOVIE
+    ;;
+  x264)
+    if [ "$TWOPASS" = "1" ]; then
+      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+           -an -preset $PRESET -c:v libx264 \
+           $SIZING \
+           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+           -b:v $BITRATE -pass 1 -r $FRAMERATE -f mp4 /dev/null
+      MOVIE=$MOVIE-$PRESET-2pass.mp4
+      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+           -an -preset $PRESET -c:v libx264 \
+           $SIZING \
+           -movflags +faststart \
+           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+           -b:v $BITRATE -pass 2 -r $FRAMERATE $MOVIE
+	  rm ffmpeg2pass*
+    else # single pass
+      MOVIE=$MOVIE-$PRESET.mp4
+      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+           -an -preset $PRESET -c:v libx264 \
+           $SIZING \
+           -movflags +faststart \
+           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+           -crf $QUALITY -r $FRAMERATE $MOVIE
+    fi
+    ;;
+  vp9)
+    if [ "$TWOPASS" = "1" ]; then
+      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+           -c:v libvpx-vp9 -pass 1 -b:v $BITRATE \
+           $SIZING \
+           -crf $QUALITY -threads $THREADS -speed 4 -tile-columns 6 -frame-parallel 1 -an -f webm /dev/null 
+      MOVIE=$MOVIE-2pass.webm
+      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg -c:v libvpx-vp9 -pass 2 -b:v $BITRATE \
+           $SIZING \
+           -movflags +faststart \
+           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+           -crf $QUALITY -threads $THREADS -speed 1 -tile-columns 6 -frame-parallel 1 -auto-alt-ref 1 -lag-in-frames 25 -an -r $FRAMERATE -f webm $MOVIE
+      rm ffmpeg2pass-0.log
+    else
+      MOVIE=$MOVIE-1pass.webm
+      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+           $SIZING \
+           -movflags +faststart \
+           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+           -an -c:v libvpx-vp9 -crf $QUALITY -b:v 0 -r $FRAMERATE $MOVIE
+    fi
+    ;;
+  hevc|x265)
+    if [ "$TWOPASS" = "1" ]; then
+      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+           -an -c:v libx265 \
+           $SIZING \
+           -b:v $BITRATE -preset $PRESET -threads $THREADS -x265-params pass=1:log-level=1 -r $FRAMERATE -f mp4 /dev/null
+      MOVIE=$MOVIE-$PRESET-2pass.mp4
+      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+           -an -c:v libx265 \
+           $SIZING \
+           -movflags +faststart \
+           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+           -b:v $BITRATE -preset $PRESET -threads $THREADS -x265-params pass=2:log-level=1 -r $FRAMERATE $MOVIE
+    else # single pass
+      MOVIE=$MOVIE-$PRESET-1pass.mp4
+      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
+           $SIZING \
+           -movflags +faststart \
+           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
+           -an \
+           -c:v libx265 -crf $QUALITY -preset $PRESET -threads $THREADS -x265-params log-level=1 -r $FRAMERATE $MOVIE
+    fi
+    ;;
+esac
+
+ELAPSED_TIME=$(($SECONDS - $START_TIME))
+echo output $MOVIE
+echo finished in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
+

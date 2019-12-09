@@ -1,76 +1,175 @@
-#!/usr/bin/env perl
+#!/usr/bin/env ruby
+
 # 
-# process all subdirectories of the name NNNNNNNN-NNNN (YYYYMMDD-HHMM)
+# 1. read directory with jpgs
+# 2. extract datetime from first and last
+# 3. load the weather data for this timeframe
 #
-# pick up the invidual tl*.jpg files
-# from different restarts of the timelapse script due to reboots
-#
-# use 'convert' to overlay each picture with the ExifDateTime value
-#
-# store the results in directory $exif
-#
-# make sure the resulting files are numbered starting with tl000001.jpg without
-# a gap to prepare for the later creation of the timelapse video using
-# 'avconv' from the libav or ffmpeg project
-#
+require 'csv'
+require 'fileutils'
+require 'date'
+require 'awesome_print'
+require 'optparse'
+require 'optparse/time'
 
-use strict;
-use warnings;
+$verbose=0
 
-my $exif = "exif"; # output directory
-my $font;
+class Weather
+  CSV_DATA_DIR = '/var/lib/weather/goc'
+  
+  # data points are pegged to 0/15/30/45 minutes
+  def normalize_instant(datum)
+    # minute = (datum.minute / 15) * 15
+    # puts DateTime.new(datum.year, datum.month, datum.day, datum.hour, minute, 0)
+    instant = DateTime.new(datum.year, datum.month, datum.day, datum.hour, 0, 0).strftime('%Y-%m-%dT%H:%M:%S')
+    # STDERR.puts "(in normalize_instant) datum=#{datum}, instant=#{instant}"
+    # instant
+  end
 
-if ("$^O" eq "MSWin32") {
-	$font = "Envy-Code-R";
-} else {
-	$font = "EnvyCodeR";
+  def initialize(year, month)
+    
+    @weather = Hash.new({temperature: -999.9, wind: 0.0})
+    csv_file = "#{CSV_DATA_DIR}/weather-#{'%04d' % year}-#{'%02d' % month}.csv"
+
+    # from_timestamp = (normalize_instant(from_timestamp))
+    # to_timestamp = (normalize_instant(to_timestamp))
+    puts "reading data from #{csv_file}" if $verbose > 0
+    CSV.foreach(csv_file, { converters: :all, col_sep: ';'}) do |row|
+      inst = row[0]
+
+      @weather[inst] = {temperature: row[1],
+                        wind: row[2]}
+      # STDERR.puts "setting value: @weather['#{inst}'] { temperature: #{row[1]}, wind: #{row[2]} }"
+    end
+    # ap @weather
+  end
+
+  def messwert(inst, messreihe)
+    # STDERR.puts "(in messwert) inst=#{normalize_instant(inst)}, messreihe=#{messreihe}"
+    begin
+      wert = @weather[normalize_instant(inst)][messreihe]
+      if wert.nil?
+        # STDERR.puts "#{normalize_instant(inst)}/#{messreihe}: no data"
+        wert = -9999.99
+      end
+    rescue StandardError => e
+      puts e
+      # STDERR.puts "inst=#{normalize_instant(inst)}, messreihe=#{messreihe}"
+      wert = -9999.99
+    end
+    wert
+  end
+
+  def temperature(inst)
+    messwert(inst, :temperature)
+  end
+
+  def wind(inst)
+    messwert(inst, :wind)
+  end
+
+  def precipitation(inst)
+    messwert(inst, :precipitation)
+  end
+end
+
+def exif_time(jpg)
+  s = `identify -format "%[EXIF:DateTimeOriginal]" #{jpg}`
+  DateTime.strptime(s, '%Y:%m:%d %H:%M:%S')
+end
+
+options = {target_dir: '.',
+           source_dir: '.',
+           interval: 0,
+           start_time: '000000',
+           end_time: '235959'
 }
 
-sub get_dirs {
-  my $cwd = ".";
-  my @dirs = ();
-  opendir(CWD, $cwd) or die $!;
-  while(my $dir = readdir(CWD)) {
-    # print $dir, "\n";
-    next unless $dir =~ /\d{8}\-\d{4}/;
-    push(@dirs, $dir);
-  }
-  closedir(CWD);
-  return @dirs;
-}
+OptionParser.new do |opts|
+  opts.banner = "Usage: process-tl-dir [options]"
+  opts.on('-i', '--interval seconds', 'Interval in seconds, default: 0') do |interval|
+    options[:interval] = interval
+  end
 
-sub max_number($) {
-  my ($dir) = @_;
-  my $max = 0;
-  my $jpg = "";
-  opendir(DIR, $dir) or die $!;
-  while (my $file = readdir(DIR)) {
-    # print $file, "\n";
-    ($jpg) = $file =~ m/(\d+).jpg/;
-    next if !defined($jpg);
-    # printf "%d\n", $jpg;
-    if ($jpg > $max) { $max = $jpg; }
-  }
-  closedir(DIR);
-  return $max +0;
-}
+  opts.on('-v', '--verbose [LEVEL]', Integer, 'logging on or off') do |verbose|
+    $verbose=verbose || 1
+  end
 
-mkdir $exif;
-my @dirs = get_dirs();
-my $number = max_number($exif) + 1;
+  opts.on('-s', '--start [IME]', 'Start time HH:MM') do |start|
+    if start =~ /([02][0-9]):([05][0-9])/
+      options[:start_time] = "#{$~[1]}#{$~[2]}00"
+    else
+      STDERR.puts "time format HH:MM"
+      exit
+    end
+  end
 
-foreach my $dir (@dirs) {
-  print "process dir=", $dir, "\n";
-  opendir(TL, $dir) or die $!;
-  while(my $jpg = readdir(TL)) {
-    next unless $jpg =~ /tl\d+.jpg/;
-    my $tgt = sprintf("tl%06d.jpg", $number);
-    print "convert $jpg to $exif/$tgt\n";
-    system("convert $dir/$jpg -font \"$font\" -gravity SouthEast -pointsize 24 -fill Magenta -annotate +12+12 \"%[EXIF:DateTimeOriginal]\" $exif/$tgt");
-    $number++;
-  }
-  closedir(TL);
-  print "\n";
-}
+  opts.on('-e', '--end [TIME]', 'End time HH:MM') do |ende|
+    if ende =~ /([02][0-9]):([05][0-9])/
+      options[:end_time] = "#{$~[1]}#{$~[2]}00"
+    else
+      STDERR.puts "time format HH:MM"
+      exit
+    end
+  end
 
-# vim:ts=2:sw=2:
+  opts.on('-h', '--help', 'displays help') do
+    puts opts
+    exit
+  end
+end.parse!
+
+puts "running script #{File.expand_path(__FILE__)}" if $verbose > 0
+ap options if $verbose > 0
+
+source_dir = options[:source_dir]
+target_dir = options[:target_dir]
+interval = options[:interval]
+start_time = options[:start_time]
+end_time = options[:end_time]
+
+target_dir = "#{target_dir}/exif-#{Process.pid}"
+puts "source dir = #{source_dir}" if $verbose > 0
+jpgs = Dir["#{source_dir}/**/tl*.jpg"].sort
+puts "found #{jpgs.size} jpgs" if $verbose > 0
+
+unless jpgs.size > 0
+  STDERR.puts "not jpgs found in source dir #{source_dir}"
+  exit 1
+end
+
+puts "process year=#{exif_time(jpgs[0]).year}, month=#{exif_time(jpgs[0]).month}" if $verbose > 0
+tag = Weather.new(exif_time(jpgs[0]).year, exif_time(jpgs[0]).month)
+puts "tag=#{tag}" if $verbose > 0
+
+FONT = "Envy-Code-R"
+
+begin
+  FileUtils.mkdir_p target_dir
+rescue StandardError => e
+  STDERR.puts "#{target_dir}: #{e}"
+  exit 1
+end
+
+puts "found #{jpgs.size}" if $verbose > 0
+
+index=0
+jpgs.each do |jpg|
+  s = `identify -format "%[EXIF:DateTimeOriginal]" #{jpg}`
+  if $? == 0
+    timestamp = DateTime.strptime(s, '%Y:%m:%d %H:%M:%S')
+    # puts timestamp.strftime("%Y-%m-%d %H:%M")
+    temperature = tag.temperature(timestamp)
+    wind = tag.wind(timestamp)
+    ftime = File.stat(jpg)
+    target_jpg = "#{target_dir}/tl#{'%06d' % index}.jpg"
+    puts "#{jpg} #{timestamp.strftime("%Y-%m-%d %H:%M")} #{"%.1f" % temperature}°C #{"%.1f" % wind} km/h #{target_jpg}" if $verbose > 0
+    `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+38 \"temp: #{"%.1f" % temperature}°C\" -annotate +12+64 \"wind: #{"%.1f km/h" % wind}\" #{target_jpg}`
+    File.utime(ftime.atime, ftime.mtime, target_jpg)
+    index += 1
+  else
+    puts "#{jpg} cannot be read"
+    # break
+  end
+end
+

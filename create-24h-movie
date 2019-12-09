@@ -1,0 +1,97 @@
+#!/bin/bash
+#
+# chdir into $1
+# assume it's a timelapse directory
+# process directory with timelapse pictures
+# from tl000001.jpg to tl<maxnum>.jpg
+#
+# create a x265/hevc video fullsize HD in 1920x1080 with quality level 23
+# create a vp9 video sized 640x480 with max bitrate of 500kb for webstreaming
+# move the movie files to ~/movies
+# delete the directory
+
+# tracing
+# set -x
+
+MOVIES=${MOVIES:-~/movies}
+INTERVAL=${INTERVAL:-120} # in seconds
+LOGLEVEL=${LOGLEVEL:-error}
+RATE=${RATE:-30} # frame rate 25 PAL, 30 NTSC
+VERBOSE=${VERBOSE:-0} 
+
+if [ "$VERBOSE" = "0" ]; then
+  # VERBOSE=1
+  LOGLEVEL=info
+else
+  echo "effective paramaters:"
+  echo "MOVIES=$MOVIES"
+  echo "INTERVAL=$INTERVAL"
+  echo "RATE=$RATE"
+  echo "VERBOSE=$VERBOSE"
+fi
+
+if [ -z "$1" ]; then
+	echo error: no parameter given!
+	echo need directory to chdir
+	echo exit
+	exit
+fi
+
+if [ ! -d "$1" ]; then
+	echo $1 is not a directory or doesn\'t exist
+	echo exit
+	exit
+fi
+
+# echo change into dir $1
+cd $1
+MONTH=$(date -d "$(basename $(pwd))" +"%m-%B")
+# echo $MONTH
+
+# we're called like this
+# find -type d | egrep '.*/2017[[:digit:]]{4}$'|xargs -l create-24h-movie
+
+process-tl-dir -i $INTERVAL -v $VERBOSE
+
+rc=$?
+
+if [ $rc -ne 0 ]; then
+  echo "process-tl-dir returned $rc"
+  echo "$(pwd): couldn't process pictures"
+	exit
+fi
+
+# find really the latest exif-*
+EXIF=$(find -type d -name 'exif-*' -cmin -10 -printf '%f')
+cd $EXIF
+
+mkdir -p $MOVIES/$MONTH/small/{webm,hevc}
+#mkmov vp9 -w 640 -q 26 -b 500k -2 -v $LOGLEVEL -r $RATE
+#mv -v *.webm $MOVIES/$MONTH/small/webm
+#mkmov hevc -w 640 -b 500k -2 -v $LOGLEVEL -r $RATE
+#mv -v *.mp4 $MOVIES/$MONTH/small/hevc
+
+# zuerst, geht am schnellsten
+mkmov x264 -w 1920 -b 3500k -v $LOGLEVEL -r $RATE
+mkdir -p $MOVIES/$MONTH/x264
+mv -v *.mp4 $MOVIES/$MONTH/x264
+
+#
+mkmov vp9 -w 1920 -b 3500k -2 -v $LOGLEVEL -r $RATE
+mkdir -p $MOVIES/$MONTH/webm
+mv -v *.webm $MOVIES/$MONTH/webm
+
+#
+mkmov hevc -w 1920 -b 3500k -2  -v $LOGLEVEL -r $RATE
+mkdir -p $MOVIES/$MONTH/x265
+mv -v *.mp4 $MOVIES/$MONTH/x265
+
+#
+mkmov hevc -w 1920 -v $LOGLEVEL -r $RATE
+mkdir -p $MOVIES/$MONTH/hq
+mv -v *.mp4 $MOVIES/$MONTH/hq
+
+cd ..
+echo remove $EXIF
+rm -rf $EXIF
+

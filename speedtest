@@ -1,0 +1,5 @@
+#!/bin/bash
+
+
+speedtest.py --csv | tee -a ~/data/speedtest.csv | process_speedtest
+

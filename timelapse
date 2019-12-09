@@ -9,13 +9,13 @@ function help {
   SCRIPT=${0##*/}
   echo
   if [ ! -z "$PID" ]; then
-    echo "     raspistill is running"
+    echo "     raspistill is running on host $(hostname)"
     echo "     PID: $PID"
     echo "     output to $(cat ~/tmp/timelapse.dir)"
     echo
     echo "     type '$SCRIPT stop' to end timelapse recording"
   else
-    echo "     raspistill is not running"
+	  echo "     raspistill is not running on host $(hostname)"
     echo
     echo "     type '$SCRIPT start' to begin timelapse"
   fi
@@ -23,10 +23,10 @@ function help {
 }
 
 # default parameter
-EX=auto
-TL=30000
-WIDTH=1280
-HEIGHT=720
+EX=night
+TL=60000
+WIDTH=1920
+HEIGHT=1080
 FLIP=
 
 while getopts ":nut:w:h:" opt; do
@@ -61,7 +61,7 @@ shift $((OPTIND-1))
 CMD=$1
 shift
 
-# echo raspistill -w $WIDTH -h $HEIGHT -ex $EX -tl $TL $CMD
+echo raspistill -w $WIDTH -h $HEIGHT -ex $EX -tl $TL $CMD
 
 
 PID=$(pgrep raspistill)
@@ -91,11 +91,12 @@ then
         mkdir -p $DAYDIR
         DIR=$DAYDIR/`date +%Y%m%d-%H%M`
         mkdir -p ~/tmp
-        echo $DIR > ~/tmp/timelapse.dir
+        echo $DAYDIR > ~/tmp/timelapse.dir
         FOTOS=~/pictures
         mkdir -p $DIR
         echo raspistill -w $WIDTH -h $HEIGHT -tl $TL $FLIP --thumb none -ex $EX -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
         raspistill -w $WIDTH -h $HEIGHT -tl $TL $FLIP --thumb none -ex $EX -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
+	ln -s ~steffenr/www/jq-galerie/galerie.html $DIR
         echo raspistill started
         echo stop with: timelapse stop
         echo output directory: $DIR

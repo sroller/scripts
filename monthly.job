@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# compacts all daily movies to one monthly film
+
+if (( $(find -iname '*.webm'|wc -l) > 0 ))
+then
+	EXT='.webm'
+  MONTH=$(stat -c%n *.webm|cut -b 1-7|head -1)
+elif (( $(find -iname '*.mp4'|wc -l) > 0 ))
+then
+	EXT='.mp4'
+  MONTH=$(stat -c%n *.mp4|cut -b 1-7|head -1)
+else
+	echo "no mp4 nor webm files found in $(pwd)"
+	exit
+fi
+
+echo "#file list for concatenation" > mylist.txt
+\ls -1 *$EXT | while read line
+do echo file \'$line\' >> mylist.txt
+done
+ffmpeg -f concat -safe 0 -i mylist.txt -c copy $MONTH-month$EXT
+if [ "$EXT" == ".webm" ]
+then
+  ffmpeg -i $MONTH-month$EXT -i ~timelapse/archive/movies/sound/alles.webm -c copy -shortest $MONTH-sound$EXT
+else
+  # assuming mp4
+  ffmpeg -i $MONTH-month$EXT -i ~timelapse/archive/movies/sound/alles.mp3 -c copy -shortest $MONTH-sound$EXT
+fi
+echo monthnly movie in $MONTH-month$EXT
+rm mylist.txt
