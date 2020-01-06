@@ -21,13 +21,14 @@ VERBOSE=${VERBOSE:-0}
 
 if [ "$VERBOSE" = "0" ]; then
   # VERBOSE=1
-  LOGLEVEL=info
+  LOGLEVEL=error
 else
   echo "effective paramaters:"
   echo "MOVIES=$MOVIES"
   echo "INTERVAL=$INTERVAL"
   echo "RATE=$RATE"
   echo "VERBOSE=$VERBOSE"
+  $V=-v
 fi
 
 if [ -z "$1" ]; then
@@ -74,24 +75,26 @@ mkdir -p $MOVIES/$MONTH/small/{webm,hevc}
 # zuerst, geht am schnellsten
 mkmov x264 -w 1920 -b 3500k -v $LOGLEVEL -r $RATE
 mkdir -p $MOVIES/$MONTH/x264
-mv -v *.mp4 $MOVIES/$MONTH/x264
+mv $V *.mp4 $MOVIES/$MONTH/x264
 
 #
 mkmov vp9 -w 1920 -b 3500k -2 -v $LOGLEVEL -r $RATE
 mkdir -p $MOVIES/$MONTH/webm
-mv -v *.webm $MOVIES/$MONTH/webm
+mv $V *.webm $MOVIES/$MONTH/webm
 
 #
 mkmov hevc -w 1920 -b 3500k -2  -v $LOGLEVEL -r $RATE
 mkdir -p $MOVIES/$MONTH/x265
-mv -v *.mp4 $MOVIES/$MONTH/x265
+mv $V *.mp4 $MOVIES/$MONTH/x265
 
 #
 mkmov hevc -w 1920 -v $LOGLEVEL -r $RATE
 mkdir -p $MOVIES/$MONTH/hq
-mv -v *.mp4 $MOVIES/$MONTH/hq
+mv $V *.mp4 $MOVIES/$MONTH/hq
 
 cd ..
-echo remove $EXIF
+if [ "$VERBOSE" != "0" ]; then
+  echo remove $EXIF
+fi
 rm -rf $EXIF
 

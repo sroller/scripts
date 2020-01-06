@@ -5,18 +5,22 @@ if [ -n "$DEBUG" ]; then
   set -x
 fi
 
-renice -n 10 $$      # reduce priority
+renice -n 10 $$ > /dev/null      # reduce priority
 
 START_TIME=$SECONDS
 
 # defaults
 WIDTH=1920
-LOG_LEVEL=info
 BITRATE=500k
 QUALITY=23
 TWOPASS=0
 FRAMERATE=30
 PRESET=medium
+if [ "$VERBOSE" == "0" ]; then
+  LOG_LEVEL=error
+else
+  LOG_LEVEL=info
+fi
 
 THREADS=4
 
@@ -27,15 +31,14 @@ fi
 
 CODEC=$1
 if  [ "$CODEC" != "iphone" ]; then
-    stat tl000001.jpg
-  if [ $? -eq 0 ]; then
-    FDATE=$(stat -c"%y" tl000001.jpg 2> /dev/null |cut -b1-10)
-    DATUM=$(stat -c"%y" tl000001.jpg 2> /dev/null |cut -b1-10|perl -npe "s/(\d+)\-(\d+)\-(\d+)/\3.\2.\1/")
-  else
-    echo "couldn't find tl000001.jpg"
-    echo "wrong directory?"
-    exit
-  fi
+    if [ -f tl000001.jpg ]; then
+      FDATE=$(stat -c"%y" tl000001.jpg 2> /dev/null |cut -b1-10)
+      DATUM=$(stat -c"%y" tl000001.jpg 2> /dev/null |cut -b1-10|perl -npe "s/(\d+)\-(\d+)\-(\d+)/\3.\2.\1/")
+    else
+      echo "couldn't find tl000001.jpg"
+      echo "wrong directory?"
+      exit
+    fi
 fi
 
 if  [ "$CODEC" == "iphone" ]; then
@@ -90,15 +93,17 @@ while getopts w:hv:q:b:2r:p:i: opt; do
   esac
 done
 
-# log effective parameters
-echo input file     : $INPUT
-echo width          : $WIDTH
-echo log level      : $LOG_LEVEL
-echo quality for CRF: $QUALITY
-echo bitrate        : $BITRATE
-echo framerate      : $FRAMERATE fps
-echo preset         : $PRESET
-echo two pass       : $TWOPASS
+if [ "$VERBOSE" != "0" ]; then
+  # log effective parameters
+  echo input file     : $INPUT
+  echo width          : $WIDTH
+  echo log level      : $LOG_LEVEL
+  echo quality for CRF: $QUALITY
+  echo bitrate        : $BITRATE
+  echo framerate      : $FRAMERATE fps
+  echo preset         : $PRESET
+  echo two pass       : $TWOPASS
+fi
 
 # movie sizing independent from picture size
 SIZING="-vf scale=$WIDTH:-1"
@@ -196,6 +201,9 @@ case $CODEC in
 esac
 
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
-echo output $MOVIE
-echo finished in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
+if [ "$VERBOSE" != "0" ]; then
+  echo output $MOVIE
+  echo finished in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
+fi
+
 

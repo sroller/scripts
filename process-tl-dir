@@ -93,6 +93,7 @@ OptionParser.new do |opts|
 
   opts.on('-v', '--verbose [LEVEL]', Integer, 'logging on or off') do |verbose|
     $verbose=verbose || 1
+    STDERR.puts "verbose on, level=#{verbose}" if $verbose != 0
   end
 
   opts.on('-s', '--start [IME]', 'Start time HH:MM') do |start|

@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+# compacts all movies to one film
+
+if (( $(find -iname '*.webm'|wc -l) > 0 ))
+then
+	EXT='.webm'
+  DAY=$(stat -c%n *.webm|cut -b 1-8|head -1)
+elif (( $(find -iname '*.mp4'|wc -l) > 0 ))
+then
+	EXT='.mp4'
+  DAY=$(stat -c%n *.mp4|cut -b 1-8|head -1)
+else
+	echo "no mp4 nor webm files found in $(pwd)"
+	exit
+fi
+
+echo "#file list for concatenation" > mylist.txt
+\ls -1 *$EXT | while read line
+do echo file \'$line\' >> mylist.txt
+done
+ffmpeg -f concat -safe 0 -i mylist.txt -c copy $DAY$EXT
+echo movie in $DAY$EXT
+rm mylist.txt

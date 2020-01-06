@@ -2,11 +2,24 @@
 
 set -x
 
+WORKDIR="."
+
+while getopts "d:" arg; do
+  case $arg in
+    d)
+      WORKDIR=$OPTARG
+      ;;
+  esac
+done
+
+cd $WORKDIR
+
 DIR=$(dirname $(pwd))
 DIRNAME=$(basename $DIR)
 HOUR=$(basename $(pwd))
 MOVIE=$DIRNAME$HOUR00-hourly
 CRF=30
+
 
 ffmpeg -y -f image2 -r 10 -pattern_type glob -i "$DIRNAME*.jpg" -c:v libx264 -crf $CRF $MOVIE-libx264.mp4
 ffmpeg -y -f image2 -r 10 -pattern_type glob -i "$DIRNAME*.jpg" -c:v libx265 -crf $CRF $MOVIE-libx265.mp4
