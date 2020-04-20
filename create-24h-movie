@@ -73,27 +73,27 @@ mkdir -p $MOVIES/$MONTH/small/{webm,hevc}
 #mv -v *.mp4 $MOVIES/$MONTH/small/hevc
 
 # zuerst, geht am schnellsten
-mkmov x264 -w 1920 -b 3500k -v $LOGLEVEL -r $RATE
+mkmov -c x264 -w 1920 -b 3500k -r $RATE
 mkdir -p $MOVIES/$MONTH/x264
 mv $V *.mp4 $MOVIES/$MONTH/x264
 
 #
-mkmov vp9 -w 1920 -b 3500k -2 -v $LOGLEVEL -r $RATE
+mkmov -c vp9 -w 1920 -b 3500k -2 -r $RATE
 mkdir -p $MOVIES/$MONTH/webm
 mv $V *.webm $MOVIES/$MONTH/webm
 
 #
-mkmov hevc -w 1920 -b 3500k -2  -v $LOGLEVEL -r $RATE
+mkmov -c hevc -w 1920 -b 3500k -2  -r $RATE
 mkdir -p $MOVIES/$MONTH/x265
 mv $V *.mp4 $MOVIES/$MONTH/x265
 
 #
-mkmov hevc -w 1920 -v $LOGLEVEL -r $RATE
+mkmov -c hevc -w 1920 -r $RATE
 mkdir -p $MOVIES/$MONTH/hq
 mv $V *.mp4 $MOVIES/$MONTH/hq
 
 cd ..
-if [ "$VERBOSE" != "0" ]; then
+if [ "$VERBOSE" == "1" ]; then
   echo remove $EXIF
 fi
 rm -rf $EXIF

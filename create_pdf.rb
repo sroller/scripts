@@ -3,6 +3,10 @@
 def create_tex(src_dir)
   jpegs = Dir["#{src_dir}/*.jpg"].sort_by { |f| File.stat(f).mtime }
   # jpegs = Dir["#{src_dir}/*.jpg"].sort
+  if jpegs.size == 0
+    STDERR.puts "no jpegs found in #{src_dir}"
+    exit
+  end
   STDERR.puts(jpegs)
   cwd = File.basename(Dir.pwd)
   File.open("#{cwd}.tex", "w") do |tex|
@@ -23,13 +27,13 @@ def create_tex(src_dir)
 end
 
 def create_pdf(tex_file)
-  STDERR.puts "file=#{tex_file}"
-  exit_code = %x( pdflatex -interaction=batchmode #{tex_file} )
-  STDERR.puts "exit code #{exit_code}"
+  STDERR.puts "output=#{tex_file}"
+  exit_code = %x( pdflatex -interaction=batchmode #{tex_file} 2>&1 )
+  # STDERR.puts "exit code #{exit_code}"
 end
 
 def clean_up(work_dir)
-  STDERR.puts "cleanup #{work_dir}"
+  # STDERR.puts "cleanup #{work_dir}"
   Dir.chdir work_dir
   Dir['*.log'].each {|f| File.delete f}
   Dir['*.aux'].each {|f| File.delete f}
