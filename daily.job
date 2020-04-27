@@ -5,7 +5,6 @@
 cd ~timelapse/timelapse/river
 # echo $(pwd)
 INTERVAL=120 create-24h-movie $(date -d "yesterday" +%Y%m%d)
-cd -
 cd ~timelapse/timelapse/street
 # echo $(pwd)
 # INTERVAL=120 MOVIES=~timelapse/pi1/movies create-24h-movie $(date -d "yesterday" +%Y%m%d)
