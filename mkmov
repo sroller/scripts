@@ -5,6 +5,7 @@ if [ -n "$DEBUG" ]; then
   set -x
 fi
 
+
 renice -n 10 $$ > /dev/null      # reduce priority
 
 START_TIME=$SECONDS
@@ -18,8 +19,29 @@ FRAMERATE=30
 PRESET=${PRESET:-medium}
 LOG_LEVEL=${LOG_LEVEL:-error}
 VERBOSE=${VERBOSE:-0}
+CODEC=x264
 
 THREADS=4
+
+function help {
+  cat <<- EOH
+  help is nigh
+
+  mkmov - make a movie from different sources
+  options:
+    -c CODEC (default: $CODEC) [x264, x265, hevc, vp9, iphone]
+    -i INPUT if empty then we'll interpret turn a directory of files into a movie
+    -w WIDTH (default: $WIDTH), maintains aspect ratio
+    -v LOG_LEVEL (default: $LOG_LEVEL) passthru to ffmpeg
+    -q QUALITY (default: $QUALITY) passthru for CRF to ffmpeg
+    -b BITRATE (default: $BITRATE) passthru for ffmpeg
+    -r FRAMERATE (default: $FRAMERATE) passthru for ffmpeg
+    -2 enables two-pass mode
+    -p PRESET (default:$PRESET) only used for x264
+
+EOH
+exit
+}
 
 while getopts c:w:hvq:b:2r:p:i: opt; do
   case $opt in
@@ -33,7 +55,7 @@ while getopts c:w:hvq:b:2r:p:i: opt; do
       WIDTH=$OPTARG
       ;;
     h)
-      echo Help
+      help
       ;;
     v)
       LOG_LEVEL=info
@@ -54,16 +76,19 @@ while getopts c:w:hvq:b:2r:p:i: opt; do
     p)
       echo possible values: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
       PRESET=$OPTARG
+      ;;
+    *)
+      help
+      ;;
   esac
 done
 
+if [ "$#" -eq 0 ]; then
+  help
+fi
 
-# if [ "-"  = "${1:0:1}" ]; then
-  # echo first parameter has to be iphone, x264, hevc or vp9
-  # exit
-# fi
 
-# CODEC=$1
+
 if  [ "$CODEC" != "iphone" ]; then
     if [ -f tl000001.jpg ]; then
       FDATE=$(stat -c"%y" tl000001.jpg 2> /dev/null |cut -b1-10)
