@@ -1,0 +1,43 @@
+#!/bin/bash
+#
+# creates a movie from all pictures of the motion detection camera
+
+CWD=$(pwd)
+DIR=$(basename $CWD)
+FRAMERATE=${FRAMERATE:-50}
+MACHINE=${MACHINE:europe}
+
+function usage {
+    echo "usage $0 [-m MACHINE ]"
+    exit
+}
+
+
+if [[ ${#} -eq 0 ]]; then
+  usage
+fi
+
+while getopts "m:h" arg; do
+  case "${arg}" in
+    m)
+      MACHINE=$OPTARG
+      ;;
+    h)
+      usage
+      ;;
+  esac
+done
+
+echo Environment
+echo ------------------------
+echo FRAMERATE=$FRAMERATE
+echo DIR=$DIR
+echo MACHINE=$MACHINE
+echo ------------------------
+echo .
+
+ffmpeg -hide_banner -v info -r $FRAMERATE -f image2 -pattern_type glob -i '**/*.jpg' -c:v libx264 -preset slower -b:v 1500k -r $FRAMERATE $DIR.mp4
+
+mailx -s "Daily Motion $DIR" steffen.roller@gmail.com <<EOM
+new daily motion in https://rathaus.vineta.ca/privat/$MACHINE/motion/pictures/$DIR/$DIR.mp4
+EOM
