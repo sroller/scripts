@@ -22,6 +22,22 @@ function help {
   exit
 }
 
+# check if the nfs mount is available
+function mounted () {
+	MAXTRIES=10
+	COUNTER=0
+	until mountpoint /nfs
+	do
+		/bin/sleep 5
+		COUNTER=$((COUNTER+1))
+		if [ $COUNTER -gt 10 ]; then
+			echo "/nfs is not a mountpoint, exiting ..."
+			exit 1
+		fi
+	done
+
+}
+
 # default parameter
 EX=night
 TL=60000
@@ -87,6 +103,7 @@ then
       then
         echo "found running raspistill, pid $PID"
       else
+	mounted "~/timelapse"
         DAYDIR=~/timelapse/`date +%Y%m%d`
         mkdir -p $DAYDIR
         DIR=$DAYDIR/`date +%Y%m%d-%H%M`
