@@ -2,6 +2,8 @@
 #
 # creates a movie from all pictures of the motion detection camera
 
+# set -x
+
 CWD=$(pwd)
 DIR=$(basename $CWD)
 FRAMERATE=${FRAMERATE:-50}
@@ -17,10 +19,13 @@ if [[ ${#} -eq 0 ]]; then
   usage
 fi
 
-while getopts "m:h" arg; do
+while getopts "m:r:h" arg; do
   case "${arg}" in
     m)
       MACHINE=$OPTARG
+      ;;
+    r)
+      FRAMERATE=$OPTARG
       ;;
     h)
       usage
@@ -36,8 +41,15 @@ echo MACHINE=$MACHINE
 echo ------------------------
 echo .
 
-ffmpeg -hide_banner -v info -r $FRAMERATE -f image2 -pattern_type glob -i '**/*.jpg' -c:v libx264 -preset slower -b:v 1500k -r $FRAMERATE $DIR.mp4
+ffmpeg -y -hide_banner -v info -r $FRAMERATE -f image2 -pattern_type glob -i '**/*.jpg' -c:v libx264 -preset slower -b:v 1500k -r $FRAMERATE $DIR.mp4
+
+if [ $? -eq 0 ]
+then
 
 mailx -s "Daily Motion $DIR" steffen.roller@gmail.com <<EOM
 new daily motion in https://rathaus.vineta.ca/privat/$MACHINE/motion/pictures/$DIR/$DIR.mp4
 EOM
+echo move $DIR.mp4 created
+
+fi
+

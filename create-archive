@@ -5,7 +5,7 @@ if [ -n "$DEBUG" ]; then
 fi
 
 BASE="$HOME/archive/movies"
-BITRATE=3000k
+BITRATE=5000k
 CRF=23
 POSITION="unknown"
 
@@ -41,7 +41,7 @@ else
   EXIF=$(stat -c%n exif*|head -1)
 fi
 cd $EXIF
-mkmov -c hevc -2 -q $CRF -b $BITRATE
+mkmov -c hevc -2 -q $CRF -b $BITRATE -v
 YEAR=$(stat -c%n *.mp4| head -1 | cut -b1-4)
 if [ $? -ne 0 ]; then
   echo "couldn't find output mp4"
@@ -54,7 +54,7 @@ TGTDIR="$YEAR/$MONTH-$(date -d "$YEAR-$MONTH-01" +%B)"
 mkdir -p $BASE/x265/$POSITION/$TGTDIR
 mv -v *.mp4 $BASE/x265/$POSITION/$TGTDIR
 
-mkmov -c vp9 -2 -q $CRF -b $BITRATE
+mkmov -c vp9 -2 -q $CRF -b $BITRATE -v
 YEAR=$(stat -c%n *.webm| head -1 | cut -b1-4)
 
 if [ $? -ne 0 ]; then
