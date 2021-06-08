@@ -17,13 +17,11 @@ $verbose=0
 class Weather
   CSV_DATA_DIR = '/var/lib/weather/goc'
   
-  # data points are pegged to 0/15/30/45 minutes
+  # data points are pegged to the full hour
   def normalize_instant(datum)
-    # minute = (datum.minute / 15) * 15
-    # puts DateTime.new(datum.year, datum.month, datum.day, datum.hour, minute, 0)
     instant = DateTime.new(datum.year, datum.month, datum.day, datum.hour, 0, 0).strftime('%Y-%m-%dT%H:%M:%S')
     # STDERR.puts "(in normalize_instant) datum=#{datum}, instant=#{instant}"
-    # instant
+    instant
   end
 
   def initialize(year, month)
@@ -34,7 +32,8 @@ class Weather
     # from_timestamp = (normalize_instant(from_timestamp))
     # to_timestamp = (normalize_instant(to_timestamp))
     puts "reading data from #{csv_file}" if $verbose > 0
-    CSV.foreach(csv_file, { converters: :all, col_sep: ';'}) do |row|
+    # CSV.foreach(csv_file, { converters: :all, col_sep: ';'}) do |row|
+    CSV.foreach(csv_file, { col_sep: ';'}) do |row|
       inst = row[0]
 
       @weather[inst] = {temperature: row[1],
