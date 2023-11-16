@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# warn if disk usage is over 90%
+df -h | grep ^/dev  | awk '{l = $LINE; gsub("%", "", $5); if ($5 > 90) {print l} }'
