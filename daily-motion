@@ -39,7 +39,7 @@ while getopts ":m:r:hd:" arg; do
   esac
 done
 
-pushd $WORKDIR
+pushd $WORKDIR > /dev/null
 
 DIR=$(basename $(pwd))
 
@@ -52,18 +52,19 @@ DIR=$(basename $(pwd))
 # echo ------------------------
 # echo .
 
-ffmpeg -y -hide_banner -v error -r $FRAMERATE -f image2 -pattern_type glob -i '**/*.jpg' -c:v libx264 -preset slower -b:v 1500k -r $FRAMERATE $DIR.mp4
+ffmpeg -y -hide_banner -v error -r $FRAMERATE -f image2 -pattern_type glob -i '**/*[0-9].jpg' -c:v libx264 -preset slower -b:v 1500k -r $FRAMERATE $DIR.mp4
 
 if [ $? -eq 0 ]
 then
-mv -v $DIR.mp4 /sdb/www/motions/$MACHINE
+mv $DIR.mp4 /sdb/www/motions/$MACHINE
 
 mailx -s "Daily Motion $DIR" steffen.roller@gmail.com <<EOM
 new daily motion in https://rathaus.vineta.ca/motions/$MACHINE/$DIR.mp4
+local path /sdb/www/motions/$MACHINE/$DIR.mp4
 EOM
 # echo move $DIR.mp4 created
 
 fi
 
-popd
+popd > /dev/null
 
