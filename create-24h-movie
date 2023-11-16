@@ -28,7 +28,7 @@ else
   echo "INTERVAL=$INTERVAL"
   echo "RATE=$RATE"
   echo "VERBOSE=$VERBOSE"
-  $V=-v
+  V="-v"
 fi
 
 if [ -z "$1" ]; then
@@ -39,7 +39,7 @@ if [ -z "$1" ]; then
 fi
 
 if [ ! -d "$1" ]; then
-	echo $1 is not a directory or doesn\'t exist
+  echo $(realpath $1) is not a directory or doesn\'t exist
 	echo exit
 	exit
 fi
