@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# set -x
+DATE=${DATE:-$(date --date="yesterday" +"%Y%m%d")}
+
+cd /sdb/home/
+
+for M in phobos europa ganymede
+do
+  if [ -d $M/motion/pictures/$DATE ]
+  then
+    # echo daily-motion -m $M -r 50 -d $M/motion/pictures/$DATE
+    daily-motion -m $M -r 50 -d $M/motion/pictures/$DATE
+    # else
+    # echo skip $M/motion/pictures/$DATE
+  fi
+done
