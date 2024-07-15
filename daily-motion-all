@@ -9,9 +9,9 @@ for M in phobos europa ganymede
 do
   if [ -d $M/motion/pictures/$DATE ]
   then
-    # echo daily-motion -m $M -r 50 -d $M/motion/pictures/$DATE
+    echo daily-motion -m $M -r 50 -d $M/motion/pictures/$DATE
     daily-motion -m $M -r 50 -d $M/motion/pictures/$DATE
-    # else
-    # echo skip $M/motion/pictures/$DATE
+  else
+    echo skip $M/motion/pictures/$DATE
   fi
 done
