@@ -3,6 +3,7 @@
 # reads output from
 # pdf2text -layout <pdf> <txt>
 
+DEBUG=0
 require 'date'
 
 def process_invoice_text(invoice_text_file)
@@ -24,25 +25,25 @@ def process_invoice_text(invoice_text_file)
   File.open(invoice_text_file) do |invoice|
     invoice.each_line do |line|
       line.chomp!
-      # puts "##{status}: #{line}"
+      STDERR.puts "##{status}: #{line}" if DEBUG==1
       if (/Statement Date: (?<datum>[A-Za-z]+ [[:digit:]]+ [[:digit:]]+)/ =~ line)
         statement_date = Date.parse(datum)
-        # STDERR.puts datum
-        # STDERR.puts statement_date
+        STDERR.puts datum if DEBUG==1
+        STDERR.puts statement_date if DEBUG==1
       end
       status = :gas if line.match(/\w*GAS/)
       status = :water if line.match(/\w*WATER/)
       if (status == :water)
         if (/Water[[:space:]]+(?<water>[[:digit:]]+)[[:space:]]+m3[[:space:]]+(?<water_rate>[\.0-9]+)[[:space:]]+(?<water_charge>[\.0-9]+)/ =~ line)
-          # print water, water_rate, water_charge
-          # puts line
+          STDERR.print water, water_rate, water_charge if DEBUG==1
+          STDERR.puts line if DEBUG==1
           water_consumption_var += water.to_f
           water_rate_var += water_rate.to_f
           water_charge_var += water_charge.to_f
         end
         if (/Sewer[[:space:]]+(?<sewer>[[:digit:]]+)[[:space:]]+m3[[:space:]]+(?<sewer_rate>[\.0-9]+)[[:space:]]+(?<sewer_charge>[\.0-9]+)/ =~ line)
-          # print sewer, sewer_rate, sewer_charge
-          # puts line
+          STDERR.print sewer, sewer_rate, sewer_charge if DEBUG==1
+          STDERR.puts line if DEBUG==1
           sewer_consumption_var += sewer.to_f
           sewer_rate_var += sewer_rate.to_f
           sewer_charge_var += sewer_charge.to_f
@@ -53,24 +54,24 @@ def process_invoice_text(invoice_text_file)
           gas_charges_var += gas_charges.to_f
         end
         if (/Total Consumption.*?(?<gas_consumption>[0-9]+)/ =~ line)
-          # STDERR.puts line
-          # STDERR.puts "gas_consumption = #{gas_consumption}"
+          STDERR.puts line if DEBUG==1
+          STDERR.puts "gas_consumption = #{gas_consumption}" if DEBUG==1
           gas_consumption_var += gas_consumption.to_f
         end
       end
 
       if (/Total Stormwater Rate Charges.*?(?<stormwater_charges>[\.0-9]+)/ =~ line)
         stormwater_charges_var += stormwater_charges.to_f
-        # STDERR.puts stormwater_charges_var
-        # STDERR.puts line
+        STDERR.puts stormwater_charges_var if DEBUG==1
+        STDERR.puts line if DEBUG==1
       end
       if (/Water Heater Rental Charges:\s+(?<water_heater>[\.0-9]+)$/ =~ line)
         water_heater_var = water_heater.to_f
-        # STDERR.puts line
+        STDERR.puts line if DEBUG==1
       end
     end
     summary = water_charge_var+sewer_charge_var+gas_charges_var+stormwater_charges_var+water_heater_var
-    printf "%s,%.2f,%d,%.2f,%d,%.2f,%.2f,%d,%.2f,%.2f\n", statement_date, summary,
+    printf "%s;%.2f;%d;%.2f;%d;%.2f;%.2f;%d;%.2f;%.2f\n", statement_date, summary,
                       water_consumption_var, water_charge_var, sewer_consumption_var, sewer_charge_var, stormwater_charges_var,
                       gas_consumption_var, gas_charges_var,
                       water_heater_var
@@ -92,7 +93,7 @@ def process_invoice_text(invoice_text_file)
 end
 
 def print_header
-  puts "date,sum,water,water charge,sewer,sewer charge,stormwater,gas,gas charge,water heater"
+  puts "date;sum;water;water charge;sewer;sewer charge;stormwater;gas;gas charge;water heater"
 end
 
 if $0 == __FILE__
