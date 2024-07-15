@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# tmux new -d -s "update-all"
+for node in europa.local io.local ganymede.local callisto.local titan.local phobos.local pi@pi-hole.local
+do
+  echo '************************************'
+  echo "         $node"
+  echo '************************************'
+  echo connecting ...
+  ssh $node "uname -a ; sudo apt-get update ; sudo apt-get -y upgrade ; sudo apt-get -y dist-upgrade ; sudo apt-get -y autoremove" 
+done
+
+ssh pi@pi-hole.local "pihole -up"
