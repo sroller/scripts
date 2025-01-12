@@ -5,6 +5,8 @@
 # first parameter has to be start or stop
 # the following parameter will be appended to the raspistill command
 
+BASE=/nfs/timelapse/$HOSTNAME
+
 function help {
   SCRIPT=${0##*/}
   echo
@@ -25,12 +27,14 @@ function help {
 # check if the nfs mount is available
 function mounted () {
 	MAXTRIES=10
+	WAIT=5
 	COUNTER=0
 	until mountpoint /nfs
 	do
-		/bin/sleep 5
+		echo "$COUNTER: wait for $WAIT seconds"
+		/bin/sleep $WAIT
 		COUNTER=$((COUNTER+1))
-		if [ $COUNTER -gt 10 ]; then
+		if [ $COUNTER -gt $MAXTRIES ]; then
 			echo "/nfs is not a mountpoint, exiting ..."
 			exit 1
 		fi
@@ -104,16 +108,15 @@ then
         echo "found running raspistill, pid $PID"
       else
 	mounted "~/timelapse"
-        DAYDIR=~/timelapse/`date +%Y%m%d`
+        DAYDIR=$BASE/`date +%Y%m%d`
         mkdir -p $DAYDIR
         DIR=$DAYDIR/`date +%Y%m%d-%H%M`
+        mkdir -p $DIR
         mkdir -p ~/tmp
         echo $DAYDIR > ~/tmp/timelapse.dir
-        FOTOS=~/pictures
-        mkdir -p $DIR
-        echo raspistill -w $WIDTH -h $HEIGHT -tl $TL $FLIP --thumb none -ex $EX -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
-        raspistill -w $WIDTH -h $HEIGHT -tl $TL $FLIP --thumb none -ex $EX -n -t 0 -l $FOTOS/last.jpg -o $DIR/tl%06d.jpg $* &
-	ln -s ~steffenr/www/jq-galerie/galerie.html $DIR
+        echo raspistill -w $WIDTH -h $HEIGHT -tl $TL $FLIP --thumb none -ex $EX -n -t 0 -l $BASE/last.jpg -o $DIR/tl%06d.jpg $* &
+        raspistill -w $WIDTH -h $HEIGHT -tl $TL $FLIP --thumb none -ex $EX -n -t 0 -l $BASE/last.jpg -o $DIR/tl%06d.jpg $* &
+	ln -s /var/www/rathaus/html/shared/galerie.html $DIR
         echo raspistill started
         echo stop with: timelapse stop
         echo output directory: $DIR
