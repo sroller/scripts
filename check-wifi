@@ -6,20 +6,18 @@
 #
 # if not than restart connection
 #
+# echo on
+# set -x
 
-# check if there is Wifi USB dongle plugged in
-if lsusb | grep -q "Ralink"; then
-  # does it have an address?
-  IP=$(ifconfig wlan0 | grep "inet addr:" | cut -d":" -f2| cut -d" " -f1)
-  if [ ! -z "$IP" ]; then
-    logger -t "${0##*/}" up: $IP
-  else
-    logger -t "${0##*/}" "connection down! attempting reconnection"
-    echo "${0##*/}" "connection down! attempting reconnection"
-		ifconfig wlan0
-    ifdown --force wlan0
-    sleep 10
-    ifup --force wlan0
-    ifconfig wlan0
-  fi
+# check if there is Wifi 
+# does it have an address?
+if ping -c 1 -W 1 192.168.1.1 &> /dev/null; then
+	logger -t "${0##*/}" up: $IP
+	echo connected
+else
+	logger -t "${0##*/}" "connection down! attempting reconnection"
+	echo "${0##*/}" "connection down! attempting reconnection"
+	ip link set wlan0 down
+	sleep 10
+	ip link set wlan0 up
 fi
