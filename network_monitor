@@ -1,0 +1,32 @@
+#!/bin/bash
+
+URL=https://mysavvy.teksavvy.com
+
+echo "start at $(date)"
+
+while true
+do
+  curl --head -s $URL > /dev/null
+
+  RC=$?
+
+  if [ $RC -ne 0 ]; then
+    # couldn't connect to outside world
+    echo
+    echo "$(date +%Y%m%d-%H%M%S): $(basename $0): curl to $URL failed with exit code $RC"
+
+    # check our wifi
+    curl --head -s http://192.168.1.1/webpages/login.html > /dev/null
+    if [ $? -eq 0 ]; then
+      echo "$(date +%Y%m%d-%H%M%S): $(basename $0): curl to router OK"
+      logger -t $(basename $0) "curl to router ok"
+    else
+      echo "$(date +%Y%m%d-%H%M%S): $(basename $0): curl to router NOT ok"
+      logger -t $(basename $0) "curl to router failed, Wifi issue?"
+    fi
+    logger -t $(basename $0)  "curl to $URL failed with exit code $RC"
+  else
+    echo -n .
+  fi
+  sleep 7
+done
