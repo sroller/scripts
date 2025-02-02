@@ -1,7 +1,34 @@
 #!/bin/bash
 
 # tmux new -d -s "update-all"
-for node in europa.local io.local ganymede.local callisto.local titan.local phobos.local pi-hole.local
+
+MACHINES="europa.local io.local ganymede.local callisto.local titan.local phobos.local pi-hole.local"
+DEAD=0
+
+# all machines alive?
+echo "check whether all systems are alive"
+for node in $MACHINES
+do
+  if ping -W 1 -c 1 $node > /dev/null
+  then
+    echo "$node is alive"
+  else
+    DEAD=1
+  fi
+done
+
+if [ "$DEAD" == "1" ]
+then
+  read -p "Do you want to continue anyway? (y/n)" yn
+  case $yn in
+    [Yy]* ) echo "Let's go then"
+            break;;
+    [Nn]* ) echo "Go fix your stuff and try again"
+            exit;;
+  esac
+fi
+
+for node in $MACHINES
 do
   echo -ne "\033]0;updating $node\007"
   echo '************************************'
