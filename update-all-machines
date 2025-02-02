@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # tmux new -d -s "update-all"
-for node in europa.local io.local ganymede.local callisto.local titan.local phobos.local pi@pi-hole.local
+for node in europa.local io.local ganymede.local callisto.local titan.local phobos.local pi-hole.local
 do
+  echo -ne "\033]0;updating $node\007"
   echo '************************************'
   echo "         $node"
   echo '************************************'
@@ -16,4 +17,4 @@ done
 echo '************************************'
 echo "         pihole -up"
 echo '************************************'
-ssh pi@pi-hole.local "pihole -up"
+ssh steffenr@pi-hole.local "pihole -up"
