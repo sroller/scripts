@@ -3,3 +3,9 @@ drip
 inlein
 *.swp
 .nrepl-history
+ffmpeg
+ffplay
+ffprobe
+x264
+lein
+linux-install*

@@ -1,0 +1,66 @@
+#!/bin/bash
+
+set -x
+
+TIMEFORMAT='Script finished after %lR'
+time {
+
+# MOVIES=${MOVIES:-~/movies}
+MONTH=$(date -d last-month +"%m")
+YEAR=$(date -d -last-month +"%Y")
+MONTH_DIR=$(date -d last-month +"%m-%B")
+WEATHER_DATA_FILE=/var/lib/weather/goc/weather-$YEAR-$MONTH.csv 
+
+get_weather_data fetch -v $MONTH $YEAR
+
+if [ ! -f $WEATHER_DATA_FILE ]; then
+  echo $WEATHER_DATA_FILE not found
+  exit
+fi
+
+WEATHER_DATA=$(tail -1 $WEATHER_DATA_FILE | awk -F';' '{ print $2 }')
+
+# last list in weather data file is empty
+# data wasn't - yet - read from Environment Canada
+if [ -z "$WEATHER_DATA" ]; then
+  echo weather data for month $MONTH not complete
+  echo try again later
+  exit
+fi
+
+
+cd ~/timelapse/river
+RIVER=~timelapse/archive/pictures/river/$YEAR/$MONTH_DIR
+mkdir -p $RIVER
+STREET=~timelapse/archive/pictures/street/$YEAR/$MONTH_DIR
+mkdir -p $STREET
+
+cd ~/timelapse/river
+tar c $YEAR$MONTH* | tar -C $RIVER -xv
+
+cd ~/timelapse/street
+tar c $YEAR$MONTH* | tar -C $STREET -xv
+
+cd $RIVER
+find -maxdepth 1 -type d -name "$YEAR$MONTH*" | xargs -l create-archive
+
+cd ~timelapse/archive/movies/webm/river/$YEAR/$MONTH_DIR
+concat-daily-movies
+cd ~timelapse/archive/movies/x265/river/$YEAR/$MONTH_DIR
+concat-daily-movies
+
+
+# cd $STREET
+# find -maxdepth 1 -type d -name "$YEAR$MONTH*" | xargs -l create-archive
+
+# cd ~/archive/movies/webm/street/$YEAR/$MONTH_DIR
+# concat-daily-movies
+# cd ~/archive/movies/x265/street/$YEAR/$MONTH_DIR
+# concat-daily-movies
+
+echo done!
+echo you can probably delete directories under $(realpath ~timelapse/timelapse/river)/$YEAR$MONTH\*
+echo and $(realpath ~timelapse/timelapse/street/)/$YEAR$MONTH\*
+
+}
+

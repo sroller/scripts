@@ -5,6 +5,8 @@
 # first parameter has to be start or stop
 # the following parameter will be appended to the libcamera-still command
 
+BASE=/nfs/timelapse/$HOSTNAME
+
 function help {
   SCRIPT=${0##*/}
   echo
@@ -25,12 +27,14 @@ function help {
 # check if the nfs mount is available
 function mounted () {
 	MAXTRIES=10
+	WAIT=5
 	COUNTER=0
 	until mountpoint /nfs
 	do
-		/bin/sleep 5
+		echo "$COUNTER: wait for $WAIT seconds"
+		/bin/sleep $WAIT
 		COUNTER=$((COUNTER+1))
-		if [ $COUNTER -gt 10 ]; then
+		if [ $COUNTER -gt $MAXTRIES ]; then
 			echo "/nfs is not a mountpoint, exiting ..."
 			exit 1
 		fi
@@ -112,6 +116,7 @@ then
         DAYDIR=$OUTPUTDIR/`date +%Y%m%d`
         mkdir -p $DAYDIR
         DIR=$DAYDIR/`date +%Y%m%d-%H%M`
+        mkdir -p $DIR
         mkdir -p ~/tmp
         echo $DAYDIR > ~/tmp/timelapse.dir
         FOTOS=~/pictures

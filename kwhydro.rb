@@ -4,8 +4,8 @@ require 'time'
 
 # process output from pdftotext
 
+$VERBOSE=true
 $VERBOSE=false
-# $VERBOSE=true
 
 SEP="\t"
 
