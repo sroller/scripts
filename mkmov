@@ -39,6 +39,12 @@ function help {
     -2 enables two-pass mode
     -p PRESET (default:$PRESET) only used for x264
 
+  start with
+
+      DEBUG=1 $(basename $0) ...
+
+  to enable debugging
+
 EOH
 exit
 }
@@ -90,11 +96,10 @@ fi
 
 
 if  [ "$CODEC" != "iphone" ]; then
-    if [ -f tl000001.jpg ]; then
-      FDATE=$(stat -c"%y" tl000001.jpg 2> /dev/null |cut -b1-10)
-      DATUM=$(stat -c"%y" tl000001.jpg 2> /dev/null |cut -b1-10|perl -npe "s/(\d+)\-(\d+)\-(\d+)/\3.\2.\1/")
+    if true; then
+      DATUM=$(ls -1 *.jpg | head -n 1 | xargs stat -c"%y" | cut -b1-10)
     else
-      echo "couldn't find tl000001.jpg"
+      echo "couldn't find jpg file"
       echo "wrong directory?"
       exit
     fi

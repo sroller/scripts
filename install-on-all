@@ -1,0 +1,34 @@
+#!/bin/bash
+#
+# installs software on all machines
+
+usage () { echo "$0 usage: " && grep " .)\ #" $0; exit 0; }
+while getopts "a:c:h" arg; do
+  case $arg in
+    a) # possible action: install|remove
+      echo "action: ${OPTARG}"
+      ACTION="install"
+      ;;
+    c) # name of package
+      echo "command: ${OPTARG}"
+      PACKAGE="${OPTARG}"
+      ;;
+    h | *)
+      usage
+      exit 0
+      ;;
+  esac
+done
+
+for node in europa.local io.local ganymede.local callisto.local titan.local phobos.local pi@pi-hole.local
+do
+  echo '************************************'
+  echo "         $node"
+  echo '************************************'
+  echo connecting ...
+  ssh $node "uname -a ; sudo apt-get -y ${ACTION} ${PACKAGE}"
+  echo '************************************'
+  echo "         $node done"
+  echo '************************************'
+done
+

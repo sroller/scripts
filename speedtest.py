@@ -1,1 +1,0 @@
-../src/speedtest-cli/speedtest.py

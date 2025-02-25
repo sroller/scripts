@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# set -x 
+# Get the IP address from the first argument
+ip_address="$1"
+
+# Use the 'host' command to resolve the IP address to a hostname
+hostname=$(host "$ip_address" | head -n 1 | awk '/domain name pointer/ {print $5}' | sed 's/\.$//')
+
+# Check if the 'host' command was successful
+if [ -n "$hostname" ]; then
+    # echo "The hostname for IP address $ip_address is $hostname"
+    echo $hostname
+else
+    # echo "Failed to resolve hostname for IP address $ip_address"
+    echo $ip_address
+fi
