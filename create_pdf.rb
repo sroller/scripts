@@ -29,11 +29,11 @@ end
 def create_pdf(tex_file)
   STDERR.puts "output=#{tex_file}"
   exit_code = %x( pdflatex -interaction=batchmode #{tex_file} 2>&1 )
-  # STDERR.puts "exit code #{exit_code}"
+  STDERR.puts "exit code #{exit_code}"
 end
 
 def clean_up(work_dir)
-  # STDERR.puts "cleanup #{work_dir}"
+  STDERR.puts "cleanup #{work_dir}"
   Dir.chdir work_dir
   Dir['*.log'].each {|f| File.delete f}
   Dir['*.aux'].each {|f| File.delete f}

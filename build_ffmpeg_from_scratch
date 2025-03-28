@@ -33,11 +33,28 @@ sudo apt-get update -qq && sudo apt-get -y install \
   wget \
   yasm \
   zlib1g-dev \
-  nasm libnuma-dev
+  nasm libnuma-dev libnuma1
   
 # libfdk-aac-dev libopus-dev libsvtav1-dev libsvtav1enc-dev libsvtav1dec-dev  libdav1d-dev  libunistring-dev python3-pip
-  
+
+cd ~
+rm -rf ffmpeg_source
+rm -rf ffmpeg_build
 mkdir -p ~/ffmpeg_sources ~/bin
+
+# for Nvidia support
+git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
+cd nv-codec-headers && sudo make install && cd -
+
+# netflix
+cd ~/ffmpeg_sources
+# wget https://github.com/Netflix/vmaf/archive/v3.0.0.tar.gz
+if [ $(gh release list -L 1 -R Netflix/vmaf | awk '{print $1}') != 'v3.0.0' ]
+then
+  echo New release of Netflix/vmaf available!
+  echo change script $0
+  exit
+fi
 
 # install x264 support
 cd ~/ffmpeg_sources
@@ -104,10 +121,7 @@ make
 make install
 
 
-# netflix
-cd ~/ffmpeg_sources
-wget https://github.com/Netflix/vmaf/archive/v3.0.0.tar.gz
-tar xvf v3.0.0.tar.gz
+tar xvf ~/share/Netflix/vmaf/archive/v3.0.0.tar.gz
 mkdir -p vmaf-3.0.0/libvmaf/build
 cd vmaf-3.0.0/libvmaf/build
 meson setup -Denable_tests=false -Denable_docs=false --buildtype=release --default-library=static .. --prefix "$HOME/ffmpeg_build" --bindir="$HOME/bin" --libdir="$HOME/ffmpeg_build/lib"
@@ -123,11 +137,14 @@ PATH="$HOME/bin:$PATH" make
 make install
 
 cd ~/ffmpeg_sources
-wget -O ffmpeg-snapshot.tar.bz2 https://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2
-tar xjvf ffmpeg-snapshot.tar.bz2
-git clone https://git.ffmpeg.org/ffmpeg.git
-cd ffmpeg
+git -C ffmpeg pull || git clone https://git.ffmpeg.org/ffmpeg.git
+# wget -O ffmpeg-snapshot.tar.bz2 https://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2
+# tar xjvf ffmpeg-snapshot.tar.bz2
+# cd ffmpeg
+# git pull
 
+cd ffmpeg
+pwd
 PATH="$HOME/bin:$PATH" PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure \
   --prefix="$HOME/ffmpeg_build" \
   --pkg-config-flags="--static" \
@@ -150,7 +167,17 @@ PATH="$HOME/bin:$PATH" PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./conf
   --enable-libvpx \
   --enable-libx264 \
   --enable-libx265 \
-  --enable-nonfree && \
+  --enable-nonfree \
+  --enable-cuda-nvcc \
+  --enable-cuda-nvcc \
+  --enable-libnpp \
+  --extra-cflags=-I/usr/local/cuda/include \
+  --extra-ldflags=-L/usr/local/cuda/lib64 \
+  --enable-nvenc \
+  --enable-nvdec \
+  --enable-cuvid \
+  --enable-gpl \
+  --enable-version3 && \
 PATH="$HOME/bin:$PATH" make && \
 make install && \
 hash -r

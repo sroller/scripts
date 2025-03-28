@@ -9,3 +9,5 @@ ffprobe
 x264
 lein
 linux-install*
+yt-dlp
+vmaf
