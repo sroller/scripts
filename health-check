@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Check disk space
+df -h / | awk '{ print $5 " " $1 }' | grep -v Use | while read output;
+do
+  echo "Disk Space Check: $output"
+done
+
+# Check memory usage
+free -m | grep Mem | awk '{print "Memory Usage: "$3"/"$2" MB"}'
+
+# Check CPU load
+uptime | awk '{print "CPU Load Average (15 min): "$12}'

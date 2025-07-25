@@ -44,4 +44,4 @@ done
 echo '************************************'
 echo "         pihole -up"
 echo '************************************'
-ssh steffenr@pi-hole.local "pihole -up"
+ssh steffenr@pi-hole.local "sudo pihole -up"

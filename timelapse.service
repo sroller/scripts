@@ -1,12 +1,13 @@
 [Unit]
-After=nfs.mount
+After=network-online.target
+Wants=nfs.mount
 
 [Service]
-ExecStart=/usr/local/bin/timelapse -t 60000 -n start
-Type=forking
+ExecStart=/usr/local/bin/timelapse.py -t 60 -v ERROR -o /nfs/home/io/timelapse/timelapse/river -l /nfs/home/io/timelapse/pictures
+Type=simple
 User=timelapse
 Group=timelapse
 
 [Install]
-WantedBy=network-online.target
+; WantedBy=network-online.target
 
