@@ -1,0 +1,47 @@
+## ComfyUI-Manager: installing dependencies done.
+[2024-12-15 21:41:20.090] ** ComfyUI startup time: 2024-12-15 21:41:20.090832
+[2024-12-15 21:41:20.090] ** Platform: Linux
+[2024-12-15 21:41:20.090] ** Python version: 3.10.15 (main, Oct  3 2024, 07:27:34) [GCC 11.2.0]
+[2024-12-15 21:41:20.091] ** Python executable: /home/steffenr/.conda/envs/fal/bin/python
+[2024-12-15 21:41:20.091] ** ComfyUI Path: /home/steffenr/ComfyUI
+[2024-12-15 21:41:20.091] ** Log path: /barracuda/home/steffenr/scripts/comfyui.log
+[2024-12-15 21:41:20.639] 
+Prestartup times for custom nodes:
+[2024-12-15 21:41:20.639]    4.1 seconds: /barracuda/home/steffenr/ComfyUI/custom_nodes/ComfyUI-Manager
+[2024-12-15 21:41:20.639] 
+Total VRAM 11931 MB, total RAM 31996 MB
+[2024-12-15 21:41:30.541] pytorch version: 2.5.1+cu124
+[2024-12-15 21:41:30.542] Set vram state to: NORMAL_VRAM
+[2024-12-15 21:41:30.543] Device: cuda:0 NVIDIA GeForce RTX 3060 : cudaMallocAsync
+[2024-12-15 21:41:34.658] Using pytorch cross attention
+[2024-12-15 21:41:41.067] [Prompt Server] web root: /barracuda/home/steffenr/ComfyUI/web
+[2024-12-15 21:41:47.827] ### Loading: ComfyUI-Manager (V2.55.4)
+[2024-12-15 21:41:47.912] ### ComfyUI Version: v0.3.7-6-gac2f052 | Released on '2024-12-07'
+[2024-12-15 21:41:48.041] [ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/alter-list.json
+[2024-12-15 21:41:48.107] [ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/github-stats.json
+[2024-12-15 21:41:48.149] [ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/custom-node-list.json
+[2024-12-15 21:41:48.172] [ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/extension-node-map.json
+[2024-12-15 21:41:48.272] [ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/model-list.json
+[2024-12-15 21:41:53.004] 
+Import times for custom nodes:
+[2024-12-15 21:41:53.005]    0.0 seconds: /barracuda/home/steffenr/ComfyUI/custom_nodes/websocket_image_save.py
+[2024-12-15 21:41:53.005]    0.0 seconds: /barracuda/home/steffenr/ComfyUI/custom_nodes/cg-image-picker
+[2024-12-15 21:41:53.005]    0.1 seconds: /barracuda/home/steffenr/ComfyUI/custom_nodes/ComfyUI-Manager
+[2024-12-15 21:41:53.005]    0.6 seconds: /barracuda/home/steffenr/ComfyUI/custom_nodes/ComfyUI-VideoHelperSuite
+[2024-12-15 21:41:53.005]    4.3 seconds: /barracuda/home/steffenr/ComfyUI/custom_nodes/ComfyUI_InstantID
+[2024-12-15 21:41:53.005]    4.5 seconds: /barracuda/home/steffenr/ComfyUI/custom_nodes/ComfyUI-HunyuanVideoWrapper
+[2024-12-15 21:41:53.005] 
+[2024-12-15 21:41:53.014] Starting server
+
+[2024-12-15 21:41:53.015] To see the GUI go to: http://0.0.0.0:8188
+[2024-12-15 21:42:04.818] got prompt
+[2024-12-15 21:42:13.441] Loading text encoder model (clipL) from: /barracuda/home/steffenr/ComfyUI/models/clip/clip-vit-large-patch14
+[2024-12-15 21:42:21.601] Text encoder to dtype: torch.float16
+[2024-12-15 21:42:21.641] Loading tokenizer (clipL) from: /barracuda/home/steffenr/ComfyUI/models/clip/clip-vit-large-patch14
+[2024-12-15 21:42:21.891] Loading text encoder model (llm) from: /barracuda/home/steffenr/ComfyUI/models/LLM/llava-llama-3-8b-text-encoder-tokenizer
+[2024-12-15 21:47:01.166] Loading checkpoint shards: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [04:38<00:00, 62.28s/it]Loading checkpoint shards: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [04:38<00:00, 69.72s/it]
+[2024-12-15 21:48:26.961] got prompt
+[2024-12-15 21:49:59.379] FETCH DATA from: /barracuda/home/steffenr/ComfyUI/custom_nodes/ComfyUI-Manager/extension-node-map.json [DONE]
+[2024-12-15 21:51:05.510] FETCH DATA from: /barracuda/home/steffenr/ComfyUI/custom_nodes/ComfyUI-Manager/extension-node-map.json [DONE]
+[2024-12-15 21:51:26.439] 
+Stopped server

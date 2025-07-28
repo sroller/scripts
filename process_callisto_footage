@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set +x
+DAY=$(date -d "yesterday" +%Y%m%d)
+INPUT_DIR=/srv/motion/callisto/movies/$DAY
+OUTPUT_FILE=/seagate/www/rathaus/html/movies/Callisto/$DAY.mp4
+
+
+# /barracuda/home/steffenr/.virtualenvs/opencv/bin/python /home/steffenr/src/python_ai/ChatGPT/combine_footage/process_videos.py --input $INPUT_DIR --output $OUTPUT_FILE > all_output.txt 2>&1
+/barracuda/home/steffenr/.virtualenvs/opencv/bin/python /home/steffenr/src/python_ai/ChatGPT/combine_footage/process_videos.py --input $INPUT_DIR --output $OUTPUT_FILE 
+STATUS=$?
+if [ $STATUS -eq 0 ]
+then
+  echo remove directory $INPUT_DIR
+  sudo rm -rf $INPUT_DIR
+  df -h
+  echo view/download from https://rathaus.vineta.ca/movies/Callisto/$DAY.mp4
+  mailx -s "Daily video from the driveway camera" steffen.roller@gmail.com,sroller@opentext.com <<EOM
+    view/download from https://rathaus.vineta.ca/movies/Callisto/$DAY.mp4
+EOM
+
+else
+  echo an error occurred, exiting
+fi
+

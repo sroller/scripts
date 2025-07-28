@@ -98,6 +98,7 @@ fi
 if  [ "$CODEC" != "iphone" ]; then
     if true; then
       DATUM=$(ls -1 *.jpg | head -n 1 | xargs stat -c"%y" | cut -b1-10)
+      FDATE=$DATUM
     else
       echo "couldn't find jpg file"
       echo "wrong directory?"
@@ -112,14 +113,17 @@ if  [ "$CODEC" == "iphone" ]; then
 	# echo $DATUM
 fi
 
-if  [ "$CODEC" != "x264" ] && 
-  [ "$CODEC" != "x265" ] && 
-  [ "$CODEC" != "hevc" ] && 
+if  [ "$CODEC" != "libx264" ] && 
+  [ "$CODEC" != "x264_nvenc" ] && 
+  [ "$CODEC" != "libx265" ] && 
+  [ "$CODEC" != "hevc_nvenc" ] && 
+  [ "$CODEC" != "av1_nvenc" ] && 
+  [ "$CODEC" != "libsvtav1" ] && 
   [ "$CODEC" != "iphone" ] &&  # not really a codec though
   [ "$CODEC" != "vp9" ]
 then
   echo unknown codec
-  echo valid parameters are x264, x265, iphone, hevc, vp9
+  echo valid parameters are x264, x265, iphone, hevc, vp9, 264_nvenc, hevc_nvenc
   exit
 fi
 
@@ -161,16 +165,16 @@ case $CODEC in
          -vf "scale=-2:720:flags=lanczos" \
          -crf $QUALITY $MOVIE
     ;;
-  x264)
+  x264*)
     if [ "$TWOPASS" = "1" ]; then
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-           -an -preset $PRESET -c:v libx264 \
+           -an -preset $PRESET -c:v 264_nvenc \
            $SIZING \
            -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
            -b:v $BITRATE -pass 1 -r $FRAMERATE -f mp4 /dev/null
       MOVIE=$MOVIE-$PRESET-2pass.mp4
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-           -an -preset $PRESET -c:v libx264 \
+           -an -preset $PRESET -c:v 264_nvenc \
            $SIZING \
            -movflags +faststart \
            -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
@@ -179,7 +183,7 @@ case $CODEC in
     else # single pass
       MOVIE=$MOVIE-$PRESET.mp4
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-           -an -preset $PRESET -c:v libx264 \
+           -an -preset $PRESET -c:v 264_nvenc \
            $SIZING \
            -movflags +faststart \
            -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
@@ -208,27 +212,27 @@ case $CODEC in
            -an -c:v libvpx-vp9 -crf $QUALITY -b:v 0 -r $FRAMERATE $MOVIE
     fi
     ;;
-  hevc|x265)
+  *nvenc|libsvtav1|libx265)
     if [ "$TWOPASS" = "1" ]; then
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-           -an -c:v libx265 \
+           -an -c:v $CODEC \
            $SIZING \
-           -b:v $BITRATE -preset $PRESET -threads $THREADS -x265-params pass=1:log-level=1 -r $FRAMERATE -f mp4 /dev/null
-      MOVIE=$MOVIE-$PRESET-2pass.mp4
+           -b:v $BITRATE -threads $THREADS -r $FRAMERATE -f mp4 /dev/null
+      MOVIE=$MOVIE-2pass.mp4
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-           -an -c:v libx265 \
+           -an -c:v $CODEC \
            $SIZING \
            -movflags +faststart \
            -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
-           -b:v $BITRATE -preset $PRESET -threads $THREADS -x265-params pass=2:log-level=1 -r $FRAMERATE $MOVIE
+           -b:v $BITRATE -threads $THREADS -r $FRAMERATE $MOVIE
     else # single pass
-      MOVIE=$MOVIE-$PRESET-1pass.mp4
+      MOVIE=$MOVIE-1pass.mp4
       ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
            $SIZING \
            -movflags +faststart \
            -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
            -an \
-           -c:v libx265 -crf $QUALITY -preset $PRESET -threads $THREADS -x265-params log-level=1 -r $FRAMERATE $MOVIE
+           -c:v $CODEC -crf $QUALITY -threads $THREADS -r $FRAMERATE $MOVIE
     fi
     ;;
 esac

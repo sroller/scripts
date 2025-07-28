@@ -1,17 +1,52 @@
 #!/bin/bash
+# Script to process monthly timelapse data and weather information
+# Usage: monthly.sh [-m month] [-y year]
+# Example: monthly -m 01 -y 2023
 
-set -x
+# set -x
+
+
+# Parse command-line arguments
+MONTH=""
+YEAR=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -m|--month)
+      MONTH="$2"
+      shift 2
+      ;;
+    -y|--year)
+      YEAR="$2"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
 
 TIMEFORMAT='Script finished after %lR'
 time {
 
-# MOVIES=${MOVIES:-~/movies}
-MONTH=$(date -d last-month +"%m")
-YEAR=$(date -d -last-month +"%Y")
-MONTH_DIR=$(date -d last-month +"%m-%B")
-WEATHER_DATA_FILE=/var/lib/weather/goc/weather-$YEAR-$MONTH.csv 
+MONTH=${MONTH:-$(date -d last-month +"%m")}
+YEAR=${YEAR:-$(date -d -last-month +"%Y")}
 
-get_weather_data fetch -v $MONTH $YEAR
+# MONTH_DIR should match MONTH and YEAR
+MONTH_DIR=$(date -d "$YEAR-$MONTH-01" +"%m-%B")
+
+WEATHER_DATA_FILE=/var/lib/weather/goc/weather-$YEAR-$MONTH.csv 
+TIMELAPSE_SRC_DIR=/srv/timelapse/io
+TIMELAPSE_DST_DIR=/usb_drives/my_book/archive/timelapse
+
+MONTH=${MONTH:-$(date -d last-month +"%m")}
+YEAR=${YEAR:-$(date -d -last-month +"%Y")}
+MONTH_DIR=${MONTH_DIR:-$(date -d last-month +"%m-%B")}
+WEATHER_DATA_FILE=/var/lib/weather/goc/weather-$YEAR-$MONTH.csv 
+TIMELAPSE_SRC_DIR=/srv/timelapse/io
+TIMELAPSE_DST_DIR=/usb_drives/my_book/archive/timelapse
+
+canweather -v -m $MONTH -y $YEAR
 
 if [ ! -f $WEATHER_DATA_FILE ]; then
   echo $WEATHER_DATA_FILE not found
@@ -29,20 +64,18 @@ if [ -z "$WEATHER_DATA" ]; then
 fi
 
 
-cd ~/timelapse/river
-RIVER=~timelapse/archive/pictures/river/$YEAR/$MONTH_DIR
+cd $TIMELAPSE_SRC_DIR
+RIVER=$TIMELAPSE_DST_DIR/river/$YEAR/$MONTH_DIR
 mkdir -p $RIVER
-STREET=~timelapse/archive/pictures/street/$YEAR/$MONTH_DIR
-mkdir -p $STREET
 
-cd ~/timelapse/river
+cd $TIMELAPSE_SRC_DIR
+
 tar c $YEAR$MONTH* | tar -C $RIVER -xv
-
-cd ~/timelapse/street
-tar c $YEAR$MONTH* | tar -C $STREET -xv
 
 cd $RIVER
 find -maxdepth 1 -type d -name "$YEAR$MONTH*" | xargs -l create-archive
+
+exit
 
 cd ~timelapse/archive/movies/webm/river/$YEAR/$MONTH_DIR
 concat-daily-movies

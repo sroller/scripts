@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# takes all jpgs from the directory tree created by timelapse
+# and creates 30 fps movie from it
+#
+set -x
+DIR=$(pwd)
+OUTPUT=$(basename $DIR)
+ffmpeg -y -hide_banner -r 30 -pattern_type glob -i '*.jpg' -vf "scale=-1:1080" -c:v hevc_nvenc -b:v 1500K ~/Videos/$OUTPUT.mp4
+echo "output to" ../$OUTPUT.mp4

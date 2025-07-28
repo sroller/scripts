@@ -40,7 +40,12 @@ class Weather
     begin
       wert = @weather[normalize_instant(inst)][messreihe]
       if wert.nil?
-        wert = -9999.99
+        case messreihe
+        when :wind
+          wert = 0.0
+        else
+          wert = -9999.99
+        end
       end
     rescue StandardError => e
       puts e
@@ -143,6 +148,7 @@ end
 
 puts "found #{jpgs.size}" if $verbose > 0
 
+
 index=0
 jpgs.each do |jpg|
   s = `identify -format "%[EXIF:DateTimeOriginal]" #{jpg}`
@@ -154,7 +160,7 @@ jpgs.each do |jpg|
     ftime = File.stat(jpg)
     target_jpg = "#{target_dir}/tl#{'%06d' % index}.jpg"
     puts "#{jpg} #{timestamp.strftime("%Y-%m-%d %H:%M")} #{"%.1f" % temperature}°C #{"%.1f" % wind} km/h #{target_jpg}" if $verbose > 0
-    `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+38 \"temp: #{"%.1f" % temperature}°C\" -annotate +12+64 \"wind: #{"%.1f km/h" % wind}\" #{target_jpg}`
+    `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -undercolor graya\\(50\\%,0.5\\) -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+42 \"temp: #{"%.1f" % temperature}°C\" -annotate +12+72 \"wind: #{"%.1f km/h" % wind}\" #{target_jpg}`
     File.utime(ftime.atime, ftime.mtime, target_jpg)
     index += 1
   else
@@ -162,4 +168,3 @@ jpgs.each do |jpg|
     # break
   end
 end
-

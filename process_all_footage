@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# process_footage ganymede --remove
+process_footage callisto --remove

@@ -15,8 +15,8 @@ do
     # Capture outage start time FIRST
     START_TIME=$(date +%s)
     RC=$?
-    echo
-    echo "$(date +%Y%m%d-%H%M%S): $(basename $0): ping to $TEKSAVVY failed with rc=$RC"
+    # echo
+    # echo "$(date +%Y%m%d-%H%M%S): $(basename $0): ping to $TEKSAVVY failed with rc=$RC"
     # echo "$(date +%Y%m%d-%H%M%S): $(basename $0): ping to $TEKSAVVY failed with rc=$RC" >> $LOG
 
     # Router check (secondary diagnostic)
@@ -30,14 +30,15 @@ do
       if ping -c 1 -W 1 $TEKSAVVY &> /dev/null; then
         END_TIME=$(date +%s)
         OUTAGE_DURATION=$((END_TIME - START_TIME))
-        if [ $OUTAGE_DURATION -gt 1 ]; then
+        if [ $OUTAGE_DURATION -gt 5 ]; then
           echo "$(date +%Y%m%d-%H%M%S): Connection restored after ${OUTAGE_DURATION} seconds"
           echo "$(date +%Y%m%d-%H%M%S),${OUTAGE_DURATION}" >> $LOG
         fi
         break
       fi
+      echo -n "X"
       sleep 1
     done
   fi
-  sleep 7
+  sleep 1
 done

@@ -4,29 +4,17 @@ if [ -n "$DEBUG" ]; then
   set -x
 fi
 
-BASE="$HOME/archive/movies"
+if [ -z "$1" ]; then
+  echo missing directory with timelapse jpgs to process
+  exit 1
+fi
+
+
+# BASE="$HOME/archive/movies"
+BASE="/usb_drives/my_book/archive/movies"
 BITRATE=5000k
 CRF=23
-POSITION="unknown"
-
-pwd | grep river
-if [ $? -eq 0 ]; then
-  POSITION="river"
-fi
-
-pwd | grep street
-if [ $? -eq 0 ]; then
-  POSITION="street"
-fi
-
-if [ $POSITION == "unknown" ]; then
-  echo "don't know where I am"
-  echo "can't find river nor street in current path"
-  echo "exit"
-  exit
-fi
-
-echo "direction is $POSITION"
+POSITION="river"
 
 cd $1
 EXIF=$(stat -c%n exif*)
@@ -41,7 +29,8 @@ else
   EXIF=$(stat -c%n exif*|head -1)
 fi
 cd $EXIF
-mkmov -c hevc -2 -q $CRF -b $BITRATE -v
+# mkmov -c hevc -2 -q $CRF -b $BITRATE -v
+mkmov -2 -c libsvtav1 -q $CRF -b 5000K -v
 YEAR=$(stat -c%n *.mp4| head -1 | cut -b1-4)
 if [ $? -ne 0 ]; then
   echo "couldn't find output mp4"
@@ -49,24 +38,15 @@ if [ $? -ne 0 ]; then
 fi
 
 MONTH=$(stat -c%n *.mp4| head -1 | cut -b6-7)
-mkdir -p $BASE/{webm,x265}
+mkdir -p $BASE/x265
 TGTDIR="$YEAR/$MONTH-$(date -d "$YEAR-$MONTH-01" +%B)"
 mkdir -p $BASE/x265/$POSITION/$TGTDIR
 mv -v *.mp4 $BASE/x265/$POSITION/$TGTDIR
 
-mkmov -c vp9 -2 -q $CRF -b $BITRATE -v
-YEAR=$(stat -c%n *.webm| head -1 | cut -b1-4)
-
-if [ $? -ne 0 ]; then
-  echo "couldn't find output webm"
-  exit
+cd ..
+if [ "$DEBUG" != "1" ]; then
+  rm -rf exif*
 fi
 
-MONTH=$(stat -c%n *.webm| head -1 | cut -b6-7)
-TGTDIR="$YEAR/$MONTH-$(date -d "$YEAR-$MONTH-01" +%B)"
-mkdir -p $BASE/webm/$POSITION/$TGTDIR
-mv -v *.webm $BASE/webm/$POSITION/$TGTDIR
-cd ..
-rm -rf exif*
 cd ..
 

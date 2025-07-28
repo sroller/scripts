@@ -1,0 +1,4 @@
+START_TIME=$(date +%s)
+sleep 7
+END_TIME=$(date +%s)
+echo $((END_TIME - START_TIME))

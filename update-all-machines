@@ -35,7 +35,7 @@ do
   echo "         $node"
   echo '************************************'
   echo connecting ...
-  ssh $node "uname -a ; sudo apt-get update ; sudo apt-get -y upgrade ; sudo apt-get -y dist-upgrade ; sudo apt-get -y autoremove" 
+  ssh $node "uname -a ; sudo apt-get update ; sudo apt-get -o Dpkg::Options::="--force-confdef" -y dist-upgrade ; sudo apt-get -y autoremove" 
   echo '************************************'
   echo "         $node done"
   echo '************************************'

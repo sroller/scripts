@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# build OpenCV with CUDA and cuDNN support
+
+# set -x
+
+source ~/.bashrc
+VERSION=4.11.0
+
+if [ -d ~/Downloads/opencv ]; then
+  echo found existing ~/Downloads/opencv
+  read -p "remove (y/n)? " answer
+  if [ $answer == 'y' ]
+  then
+    rm -rf ~/Downloads/opencv
+  else
+    exit
+  fi
+fi
+
+echo make sure CUDA toolkit is installed
+sudo apt install cuda-toolkit
+
+cd ~/Downloads && mkdir opencv && cd opencv
+pwd
+wget -O opencv.zip https://github.com/opencv/opencv/archive/refs/tags/$VERSION.zip
+wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/refs/tags/$VERSION.zip
+unzip -q opencv.zip
+unzip -q opencv_contrib.zip
+
+echo "Create a virtual environment for the python binding module (OPTIONAL)"
+declare -f mkvirtualenv
+mkvirtualenv opencv
+pip install numpy
+
+echo "Procced with the installation"
+cd opencv-$VERSION
+mkdir build
+cd build
+
+cmake -D CMAKE_BUILD_TYPE=RELEASE \
+-D CMAKE_INSTALL_PREFIX=/usr/local \
+-D WITH_TBB=ON \
+-D ENABLE_FAST_MATH=1 \
+-D CUDA_FAST_MATH=1 \
+-D WITH_CUBLAS=1 \
+-D WITH_CUDA=ON \
+-D BUILD_opencv_cudacodec=OFF \
+-D WITH_CUDNN=ON \
+-D OPENCV_DNN_CUDA=ON \
+-D CUDA_ARCH_BIN=8.6 \
+-D WITH_V4L=ON \
+-D WITH_QT=OFF \
+-D WITH_OPENGL=ON \
+-D WITH_GSTREAMER=ON \
+-D OPENCV_GENERATE_PKGCONFIG=ON \
+-D OPENCV_PC_FILE_NAME=opencv.pc \
+-D OPENCV_ENABLE_NONFREE=ON \
+-D OPENCV_PYTHON3_INSTALL_PATH=~/.virtualenvs/opencv/lib/python3.12/site-packages/ \
+-D PYTHON_EXECUTABLE=~/.virtualenvs/opencv/bin/python \
+-D OPENCV_EXTRA_MODULES_PATH=~/Downloads/opencv/opencv_contrib-$VERSION/modules \
+-D INSTALL_PYTHON_EXAMPLES=OFF \
+-D INSTALL_C_EXAMPLES=OFF \
+-D BUILD_EXAMPLES=OFF ..

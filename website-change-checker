@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Configuration
+WEBSITE="https://www.briefwahl-muenchen.de"
+STATE_FILE="/tmp/website_state.txt"
+EMAIL_TO="steffen.roller@gmail.com"
+
+# Fetch the website content
+current_content=$(curl -s "$WEBSITE")
+
+# Check if state file exists
+if [ ! -f "$STATE_FILE" ]; then
+    echo "$current_content" > "$STATE_FILE"
+    exit 0
+fi
+
+# Compare current content with stored content
+if ! echo "$current_content" | diff - "$STATE_FILE" > /dev/null; then
+    # Website has changed, send email
+    echo "Website $WEBSITE has changed." | mail -s "Website Change Detected" "$EMAIL_TO"
+    
+    # Update state file with new content
+    echo "$current_content" > "$STATE_FILE"
+fi
