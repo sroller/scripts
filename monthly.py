@@ -298,7 +298,8 @@ def main():
         concat_list_path = os.path.join(PUBLISH_DIR, f"concat_{YEAR}{MONTH:02d}.txt")
         with open(concat_list_path, 'w') as f:
             for mp4 in daily_mp4s:
-                f.write(f"file '{mp4}'\n")
+                abs_mp4 = os.path.abspath(mp4)
+                f.write(f"file '{abs_mp4}'\n")
         month_basename = f"{YEAR}{MONTH:02d}-month"
         month_mp4_path = os.path.join(PUBLISH_DIR, f"{month_basename}.mp4")
         ffmpeg_concat_cmd = [
