@@ -100,8 +100,22 @@ def copy_month_to_archive(year, month, base_dir, archive_dir):
         if os.path.isdir(full_path) and entry.startswith(prefix):
             found = True
             dest = os.path.join(archive_dir, entry)
-            print(f"Copying {full_path} to {dest}")
-            copy_with_timestamps(full_path, dest)
+            if not os.path.exists(dest):
+                os.makedirs(dest)
+            print(f"Consolidating JPGs and galerie.html from {full_path} to {dest}")
+            jpg_count = 0
+            galerie_copied = False
+            for root, dirs, files in os.walk(full_path):
+                for file in files:
+                    src_file = os.path.join(root, file)
+                    if file.lower().endswith('.jpg'):
+                        jpg_count += 1
+                        dst_file = os.path.join(dest, f"img{jpg_count:06d}.jpg")
+                        shutil.copy2(src_file, dst_file)
+                    elif file == "galerie.html" and not galerie_copied:
+                        dst_file = os.path.join(dest, "galerie.html")
+                        shutil.copy2(src_file, dst_file)
+                        galerie_copied = True
     if not found:
         print(f"ERROR: No directories for {year}-{month:02d} found in {base_dir}. Exiting.")
         sys.exit(1)
@@ -147,11 +161,11 @@ def annotate_image(jpg, dest_path, dt_original, temperature, wind_speed):
             except Exception:
                 dt_no_seconds = dt_original
             text = dt_no_seconds
-            print(f"Annotating image {jpg} with DateTimeOriginal: {text}")
         else:
             text = 'No DateTimeOriginal'
         temp_text = f"Temp: {temperature}°C" if temperature is not None else "Temp: N/A"
         wind_text = f"Wind: {wind_speed} km/h" if wind_speed is not None else "Wind: N/A"
+        print(f"Annotating {jpg} with DateTimeOriginal: {text}, temperature: {temperature}, wind speed: {wind_speed}")
 
         # Get text sizes
         text_width, text_height = font.getbbox(text)[2:4]
