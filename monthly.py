@@ -223,47 +223,51 @@ def process_tl_dir(day_dir):
         return
     print(f"Found {len(jpg_files)} jpg files to process.")
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        for idx, jpg in enumerate(jpg_files, start=1):
-            dest_name = f"tl{idx:06d}.jpg"
-            dest_path = os.path.join(temp_dir, dest_name)
-            try:
-                exif_dict = piexif.load(jpg)
-                dt_original = exif_dict['Exif'].get(piexif.ExifIFD.DateTimeOriginal, b'').decode('utf-8')
-            except Exception as e:
-                print(f"Warning: Could not extract EXIF from {jpg}: {e}")
-                dt_original = ''
-            temperature, wind_speed = get_weather_for_exif(dt_original, weather_data)
-            annotate_image(jpg, dest_path, dt_original, temperature, wind_speed)
-        print(f"Copied and renamed all jpgs to {temp_dir}")
+    # All jpgs are now consolidated in day_dir as img000001.jpg, img000002.jpg, ...
+    jpg_files = sorted(glob.glob(os.path.join(day_dir, "img*.jpg")))
+    if not jpg_files:
+        print(f"ERROR: No jpg files found in {day_dir}. Skipping.")
+        return
+    print(f"Found {len(jpg_files)} jpg files to process.")
 
-        # Create movie with ffmpeg
-        day_basename = os.path.basename(day_dir)
-        output_mp4 = os.path.join(day_dir, f"{day_basename}.mp4")
-        ffmpeg_cmd = [
-            "ffmpeg",
-            "-y",
-            "-framerate", "30",
-            "-i", os.path.join(temp_dir, "tl%06d.jpg"),
-            "-c:v", "libsvtav1",
-            "-b:v", "5000k",
-            output_mp4
-        ]
-        print(f"Running ffmpeg to create {output_mp4}")
+    # Annotate images in place
+    for jpg in jpg_files:
         try:
-            subprocess.run(ffmpeg_cmd, check=True)
-            print(f"Created movie: {output_mp4}")
-            if not os.path.exists(PUBLISH_DIR):
-                os.makedirs(PUBLISH_DIR)
-            publish_path = os.path.join(PUBLISH_DIR, f"{day_basename}.mp4")
-            shutil.move(output_mp4, publish_path)
-            print(f"Published movie to {publish_path}")
-        except subprocess.CalledProcessError as e:
-            print(f"ERROR: ffmpeg failed for {day_dir} with exit code {e.returncode}. Command: {e.cmd}")
-            sys.exit(1)
+            exif_dict = piexif.load(jpg)
+            dt_original = exif_dict['Exif'].get(piexif.ExifIFD.DateTimeOriginal, b'').decode('utf-8')
         except Exception as e:
-            print(f"ERROR: Unexpected error running ffmpeg for {day_dir}: {e}")
-            sys.exit(1)
+            print(f"Warning: Could not extract EXIF from {jpg}: {e}")
+            dt_original = ''
+        temperature, wind_speed = get_weather_for_exif(dt_original, weather_data)
+        annotate_image(jpg, jpg, dt_original, temperature, wind_speed)
+
+    # Create movie with ffmpeg
+    day_basename = os.path.basename(day_dir)
+    output_mp4 = os.path.join(day_dir, f"{day_basename}.mp4")
+    ffmpeg_cmd = [
+        "ffmpeg",
+        "-y",
+        "-framerate", "30",
+        "-i", os.path.join(day_dir, "img%06d.jpg"),
+        "-c:v", "libsvtav1",
+        "-b:v", "5000k",
+        output_mp4
+    ]
+    print(f"Running ffmpeg to create {output_mp4}")
+    try:
+        subprocess.run(ffmpeg_cmd, check=True)
+        print(f"Created movie: {output_mp4}")
+        if not os.path.exists(PUBLISH_DIR):
+            os.makedirs(PUBLISH_DIR)
+        publish_path = os.path.join(PUBLISH_DIR, f"{day_basename}.mp4")
+        shutil.move(output_mp4, publish_path)
+        print(f"Published movie to {publish_path}")
+    except subprocess.CalledProcessError as e:
+        print(f"ERROR: ffmpeg failed for {day_dir} with exit code {e.returncode}. Command: {e.cmd}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"ERROR: Unexpected error running ffmpeg for {day_dir}: {e}")
+        sys.exit(1)
 
 def main():
     for entry in os.listdir(ARCHIVE_DIR):
