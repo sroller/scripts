@@ -209,20 +209,6 @@ def process_tl_dir(day_dir):
     if not os.path.exists(day_dir):
         print(f"ERROR: Day directory {day_dir} does not exist. Skipping.")
         return
-    pattern = re.compile(r'^\d{8}-\d{4}$')
-    subdirs = [d for d in os.listdir(day_dir)
-              if os.path.isdir(os.path.join(day_dir, d)) and pattern.match(d)]
-    subdirs.sort()
-    jpg_files = []
-    for subdir in subdirs:
-        jpgs = glob.glob(os.path.join(day_dir, subdir, '*.jpg'))
-        jpgs.sort()
-        jpg_files.extend(jpgs)
-    if not jpg_files:
-        print(f"ERROR: No jpg files found in {day_dir}. Skipping.")
-        return
-    print(f"Found {len(jpg_files)} jpg files to process.")
-
     # All jpgs are now consolidated in day_dir as img000001.jpg, img000002.jpg, ...
     jpg_files = sorted(glob.glob(os.path.join(day_dir, "img*.jpg")))
     if not jpg_files:
