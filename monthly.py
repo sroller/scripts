@@ -280,10 +280,46 @@ def process_tl_dir(day_dir):
         sys.exit(1)
 
 def main():
-    for entry in os.listdir(ARCHIVE_DIR):
+    # Process each day and create daily MP4s
+    day_dirs = [entry for entry in os.listdir(ARCHIVE_DIR)
+               if os.path.isdir(os.path.join(ARCHIVE_DIR, entry)) and entry.startswith(f"{YEAR}{MONTH:02d}")]
+    day_dirs.sort()  # Ensure chronological order
+    daily_mp4s = []
+    for entry in day_dirs:
         day_path = os.path.join(ARCHIVE_DIR, entry)
-        if os.path.isdir(day_path) and entry.startswith(f"{YEAR}{MONTH:02d}"):
-            process_tl_dir(day_path)
+        process_tl_dir(day_path)
+        day_basename = os.path.basename(day_path)
+        mp4_path = os.path.join(PUBLISH_DIR, f"{day_basename}.mp4")
+        if os.path.exists(mp4_path):
+            daily_mp4s.append(mp4_path)
+
+    # Create a single MP4 for the entire month by concatenating daily MP4s
+    if daily_mp4s:
+        concat_list_path = os.path.join(PUBLISH_DIR, f"concat_{YEAR}{MONTH:02d}.txt")
+        with open(concat_list_path, 'w') as f:
+            for mp4 in daily_mp4s:
+                f.write(f"file '{mp4}'\n")
+        month_basename = f"{YEAR}{MONTH:02d}-month"
+        month_mp4_path = os.path.join(PUBLISH_DIR, f"{month_basename}.mp4")
+        ffmpeg_concat_cmd = [
+            "ffmpeg",
+            "-y",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", concat_list_path,
+            "-c", "copy",
+            month_mp4_path
+        ]
+        print(f"Running ffmpeg to concatenate daily movies into {month_mp4_path}")
+        try:
+            subprocess.run(ffmpeg_concat_cmd, check=True)
+            print(f"Created monthly movie: {month_mp4_path}")
+        except subprocess.CalledProcessError as e:
+            print(f"ERROR: ffmpeg failed for monthly concat with exit code {e.returncode}. Command: {e.cmd}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"ERROR: Unexpected error running ffmpeg for monthly concat: {e}")
+            sys.exit(1)
 
 if __name__ == "__main__":
     import time
