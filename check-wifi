@@ -18,11 +18,21 @@ RETRY_DELAY=15 # Seconds to wait after bringing interface up
 # --- Script ---
 SCRIPT_NAME="${0##*/}"
 
+# Detect if running in an interactive terminal.
+# This allows us to suppress output for cron and prevent reboots during manual runs.
+if [ -t 1 ]; then
+    IS_INTERACTIVE=true
+else
+    IS_INTERACTIVE=false
+fi
+
 # check if there is Wifi
 # does it have an address?
 if ping -c 1 -W 1 "$PING_TARGET" &> /dev/null; then
         logger -t "$SCRIPT_NAME" "Connection to $PING_TARGET is up."
-        echo "Connection is up."
+        if $IS_INTERACTIVE; then
+            echo "Connection is up."
+        fi
 else
         logger -t "$SCRIPT_NAME" "Connection down! Attempting reconnection..."
         echo "$SCRIPT_NAME: Connection down! Attempting reconnection..."
@@ -45,7 +55,11 @@ else
         done
 
         logger -t "$SCRIPT_NAME" "All reconnection attempts failed. Rebooting."
-        echo "All reconnection attempts failed. Rebooting."
-        # This command requires root privileges.
-        /sbin/reboot
+        if $IS_INTERACTIVE; then
+            echo "All reconnection attempts failed. Would reboot if not in an interactive session."
+        else
+            echo "All reconnection attempts failed. Rebooting."
+            # This command requires root privileges.
+            /sbin/reboot
+        fi
 fi
