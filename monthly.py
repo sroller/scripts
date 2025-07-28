@@ -95,51 +95,54 @@ def copy_month_to_archive(year, month, base_dir, archive_dir):
         os.makedirs(archive_dir)
     found = False
     # Only preserve the original subdirectory structure when copying
-    for entry in os.listdir(base_dir):
+    # Get all day directories in chronological order
+    day_entries = [entry for entry in os.listdir(base_dir)
+                  if os.path.isdir(os.path.join(base_dir, entry)) and entry.startswith(prefix)]
+    day_entries.sort()  # Sort by day (lexicographical, works for YYYYMMDD)
+    for entry in day_entries:
         full_path = os.path.join(base_dir, entry)
-        if os.path.isdir(full_path) and entry.startswith(prefix):
-            found = True
-            dest = os.path.join(archive_dir, entry)
-            if not os.path.exists(dest):
-                os.makedirs(dest)
-            print(f"Consolidating JPGs and galerie.html from {full_path} to {dest}")
-            # Gather all jpgs and sort by EXIF DateTimeOriginal
-            jpg_files = []
-            for root, dirs, files in os.walk(full_path):
-                for file in files:
-                    if file.lower().endswith('.jpg'):
-                        src_file = os.path.join(root, file)
-                        # Try to get EXIF DateTimeOriginal
-                        try:
-                            exif_dict = piexif.load(src_file)
-                            dt_original = exif_dict['Exif'].get(piexif.ExifIFD.DateTimeOriginal, b'').decode('utf-8')
-                        except Exception:
-                            dt_original = ''
-                        jpg_files.append((src_file, dt_original))
-            # Sort by DateTimeOriginal, fallback to filename if missing
-            def exif_sort_key(item):
-                src_file, dt_original = item
-                if dt_original:
+        found = True
+        dest = os.path.join(archive_dir, entry)
+        if not os.path.exists(dest):
+            os.makedirs(dest)
+        print(f"Consolidating JPGs and galerie.html from {full_path} to {dest}")
+        # Gather all jpgs and sort by EXIF DateTimeOriginal
+        jpg_files = []
+        for root, dirs, files in os.walk(full_path):
+            for file in files:
+                if file.lower().endswith('.jpg'):
+                    src_file = os.path.join(root, file)
+                    # Try to get EXIF DateTimeOriginal
                     try:
-                        return datetime.strptime(dt_original, "%Y:%m:%d %H:%M:%S")
+                        exif_dict = piexif.load(src_file)
+                        dt_original = exif_dict['Exif'].get(piexif.ExifIFD.DateTimeOriginal, b'').decode('utf-8')
                     except Exception:
-                        return src_file
-                else:
+                        dt_original = ''
+                    jpg_files.append((src_file, dt_original))
+        # Sort by DateTimeOriginal, fallback to filename if missing
+        def exif_sort_key(item):
+            src_file, dt_original = item
+            if dt_original:
+                try:
+                    return datetime.strptime(dt_original, "%Y:%m:%d %H:%M:%S")
+                except Exception:
                     return src_file
-            jpg_files.sort(key=exif_sort_key)
-            # Copy sorted jpgs
-            for idx, (src_file, _) in enumerate(jpg_files, start=1):
-                dst_file = os.path.join(dest, f"img{idx:06d}.jpg")
-                shutil.copy2(src_file, dst_file)
-            # Copy only one galerie.html
-            galerie_copied = False
-            for root, dirs, files in os.walk(full_path):
-                for file in files:
-                    if file == "galerie.html" and not galerie_copied:
-                        src_file = os.path.join(root, file)
-                        dst_file = os.path.join(dest, "galerie.html")
-                        shutil.copy2(src_file, dst_file)
-                        galerie_copied = True
+            else:
+                return src_file
+        jpg_files.sort(key=exif_sort_key)
+        # Copy sorted jpgs
+        for idx, (src_file, _) in enumerate(jpg_files, start=1):
+            dst_file = os.path.join(dest, f"img{idx:06d}.jpg")
+            shutil.copy2(src_file, dst_file)
+        # Copy only one galerie.html
+        galerie_copied = False
+        for root, dirs, files in os.walk(full_path):
+            for file in files:
+                if file == "galerie.html" and not galerie_copied:
+                    src_file = os.path.join(root, file)
+                    dst_file = os.path.join(dest, "galerie.html")
+                    shutil.copy2(src_file, dst_file)
+                    galerie_copied = True
     if not found:
         print(f"ERROR: No directories for {year}-{month:02d} found in {base_dir}. Exiting.")
         sys.exit(1)
