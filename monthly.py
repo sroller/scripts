@@ -286,4 +286,12 @@ def main():
             process_tl_dir(day_path)
 
 if __name__ == "__main__":
+    import time
+    start_time = time.time()
     main()
+    end_time = time.time()
+    elapsed = end_time - start_time
+    hours = int(elapsed // 3600)
+    minutes = int((elapsed % 3600) // 60)
+    seconds = int(elapsed % 60)
+    print(f"Total runtime: {hours}h {minutes}m {seconds}s")
