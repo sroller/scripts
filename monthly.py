@@ -103,16 +103,40 @@ def copy_month_to_archive(year, month, base_dir, archive_dir):
             if not os.path.exists(dest):
                 os.makedirs(dest)
             print(f"Consolidating JPGs and galerie.html from {full_path} to {dest}")
-            jpg_count = 0
+            # Gather all jpgs and sort by EXIF DateTimeOriginal
+            jpg_files = []
+            for root, dirs, files in os.walk(full_path):
+                for file in files:
+                    if file.lower().endswith('.jpg'):
+                        src_file = os.path.join(root, file)
+                        # Try to get EXIF DateTimeOriginal
+                        try:
+                            exif_dict = piexif.load(src_file)
+                            dt_original = exif_dict['Exif'].get(piexif.ExifIFD.DateTimeOriginal, b'').decode('utf-8')
+                        except Exception:
+                            dt_original = ''
+                        jpg_files.append((src_file, dt_original))
+            # Sort by DateTimeOriginal, fallback to filename if missing
+            def exif_sort_key(item):
+                src_file, dt_original = item
+                if dt_original:
+                    try:
+                        return datetime.strptime(dt_original, "%Y:%m:%d %H:%M:%S")
+                    except Exception:
+                        return src_file
+                else:
+                    return src_file
+            jpg_files.sort(key=exif_sort_key)
+            # Copy sorted jpgs
+            for idx, (src_file, _) in enumerate(jpg_files, start=1):
+                dst_file = os.path.join(dest, f"img{idx:06d}.jpg")
+                shutil.copy2(src_file, dst_file)
+            # Copy only one galerie.html
             galerie_copied = False
             for root, dirs, files in os.walk(full_path):
                 for file in files:
-                    src_file = os.path.join(root, file)
-                    if file.lower().endswith('.jpg'):
-                        jpg_count += 1
-                        dst_file = os.path.join(dest, f"img{jpg_count:06d}.jpg")
-                        shutil.copy2(src_file, dst_file)
-                    elif file == "galerie.html" and not galerie_copied:
+                    if file == "galerie.html" and not galerie_copied:
+                        src_file = os.path.join(root, file)
                         dst_file = os.path.join(dest, "galerie.html")
                         shutil.copy2(src_file, dst_file)
                         galerie_copied = True
