@@ -94,30 +94,14 @@ def copy_month_to_archive(year, month, base_dir, archive_dir):
     if not os.path.exists(archive_dir):
         os.makedirs(archive_dir)
     found = False
-    # Consolidate all jpg files from all matching subdirectories into one archive directory
-    consolidated_dir = archive_dir
-    if not os.path.exists(consolidated_dir):
-        os.makedirs(consolidated_dir)
-    jpg_count = 0
+    # Only preserve the original subdirectory structure when copying
     for entry in os.listdir(base_dir):
         full_path = os.path.join(base_dir, entry)
         if os.path.isdir(full_path) and entry.startswith(prefix):
             found = True
-            # Consolidate all files of that day into one target directory
-            target_dir = os.path.join(archive_dir, entry)
-            if not os.path.exists(target_dir):
-                os.makedirs(target_dir)
-            file_count = 0
-            print(f"Consolidating files from {full_path} into {target_dir}")
-            for root, dirs, files in os.walk(full_path):
-                for file in files:
-                    if file.lower().endswith('.jpg'):
-                        src_file = os.path.join(root, file)
-                        # Create a unique filename to avoid collisions
-                        jpg_count += 1
-                        dst_file = os.path.join(consolidated_dir, f"img{jpg_count:06d}.jpg")
-                        shutil.copy2(src_file, dst_file)  # preserves timestamps
-            copy_with_timestamps(full_path, target_dir)
+            dest = os.path.join(archive_dir, entry)
+            print(f"Copying {full_path} to {dest}")
+            copy_with_timestamps(full_path, dest)
     if not found:
         print(f"ERROR: No directories for {year}-{month:02d} found in {base_dir}. Exiting.")
         sys.exit(1)
