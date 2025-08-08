@@ -38,12 +38,13 @@ class Config:
     archive_dir: Path
     publish_dir: Path
     weather_data_file: Path
-    ffmpeg_framerate: int = 30
+    ffmpeg_framerate: int = 24
     ffmpeg_bitrate: str = "5000k"
     ffmpeg_codec: str = "libsvtav1" # Or "libx264" for wider compatibility
     verbose: bool = False
     quiet: bool = False
     nice_level: int = 10
+    keep_temp_dir: bool = False
 
 def get_last_month_and_year() -> Tuple[int, int]:
     """Returns the month and year of the previous month."""
@@ -59,8 +60,9 @@ def setup_config() -> Config:
     parser.add_argument('-y', '--year', type=int, help='Year as YYYY')
     parser.add_argument('-d', '--dir', type=Path, default=Path('/srv/timelapse/io'), help='Base directory for timelapse jpgs')
     parser.add_argument('-a', '--archive', type=Path, default=None, help='Archive directory for timelapse data')
-    parser.add_argument('-p', '--publish', type=Path, default=Path('/srv/timelapse/publish'), help='Directory to publish finished movies')
+    parser.add_argument('-p', '--publish', type=Path, default=None, help='Directory to publish finished movies')
     parser.add_argument('--nice', type=int, default=10, help='Set the niceness level for ffmpeg commands (0 to disable, default: 10)')
+    parser.add_argument('--keep-temp-dir', action='store_true', help='Do not delete the temporary directory with annotated images.')
 
     log_level_group = parser.add_mutually_exclusive_group()
     log_level_group.add_argument('-v', '--verbose', action='store_true', help='Enable verbose (DEBUG) logging')
@@ -73,10 +75,14 @@ def setup_config() -> Config:
 
     # Generate a default archive path if not provided
     archive_dir = args.archive
+    month_long_name = datetime(year, month, 1).strftime('%B')
     if not archive_dir:
-        month_long_name = datetime(year, month, 1).strftime('%B')
         archive_dir = Path(f"/usb_drives/my_book/archive/timelapse/river/{year}/{month:02d}-{month_long_name}")
 
+    publish_dir = args.publish
+    if not publish_dir:
+        publish_dir = Path(f"/usb_drives/my_book/archive/movies/river/{year}/{month:02d}-{month_long_name}")
+    
     weather_file = Path(f"/var/lib/weather/goc/weather-{year}-{month:02d}.csv")
 
     return Config(
@@ -84,11 +90,12 @@ def setup_config() -> Config:
         year=year,
         base_dir=args.dir,
         archive_dir=archive_dir,
-        publish_dir=args.publish,
+        publish_dir=publish_dir,
         weather_data_file=weather_file,
         verbose=args.verbose,
         quiet=args.quiet,
         nice_level=args.nice,
+        keep_temp_dir=args.keep_temp_dir,
     )
 
 # --- Utility Functions ---
@@ -140,12 +147,16 @@ def load_weather_data(weather_file: Path) -> Dict[str, Dict]:
             if len(row) < 3:
                 logging.debug(f"Skipping short row in weather data: {row}")
                 continue
-            dt, temp, wind = row[0], row[1], row[2]
+            dt, temp_str, wind_str = row[0], row[1], row[2]
             try:
-                data[dt] = {'temperature': float(temp), 'wind_speed': int(wind)}
+                # Gracefully handle empty or whitespace-only strings by converting them to None.
+                temperature = float(temp_str) if temp_str.strip() else None
+                wind_speed = int(wind_str) if wind_str.strip() else None
+
+                data[dt] = {'temperature': temperature, 'wind_speed': wind_speed}
                 logging.debug(f"Parsed weather data: {dt} -> {data[dt]}")
             except (ValueError, IndexError):
-                logging.warning(f"Could not parse weather data row: {row}")
+                logging.warning(f"Could not parse non-numeric values in weather data row: {row}")
     logging.info(f"Loaded {len(data)} weather data points from {weather_file}")
     return data
 
@@ -168,12 +179,17 @@ def archive_source_images(config: Config):
     for src_dir in sorted(daily_dirs):
         dest_dir = config.archive_dir / src_dir.name
         logging.info(f"Copying {src_dir} to {dest_dir}...")
-        shutil.copytree(src_dir, dest_dir, copy_function=shutil.copy2, dirs_exist_ok=True, ignore=shutil.ignore_patterns('galerie.html'))
+        # Use shutil.copy2 to preserve file metadata (like modification times).
+        # This is important for keeping the original timestamps on the archived images.
+        shutil.copytree(src_dir, dest_dir, copy_function=shutil.copy2,
+                        dirs_exist_ok=True, ignore=shutil.ignore_patterns('galerie.html'), symlinks=False)
 
 def get_weather_for_timestamp(dt_original_str: str, weather_data: Dict) -> Tuple[Optional[float], Optional[int]]:
     """Matches an EXIF timestamp string to the closest hourly weather data."""
     if not dt_original_str:
         return None, None
+
+    weather_entry = None
     try:
         # Key format in weather data is 'YYYY-MM-DDTHH:MM:SS'
         # EXIF format is 'YYYY:MM:DD HH:MM:SS'
@@ -182,12 +198,17 @@ def get_weather_for_timestamp(dt_original_str: str, weather_data: Dict) -> Tuple
         logging.debug(f"Searching for weather with prefix: {dt_hour_prefix}")
         for key, value in weather_data.items():
             if key.startswith(dt_hour_prefix):
-                logging.debug(f"Found weather match: {key} -> {value}")
-                return value.get('temperature'), value.get('wind_speed')
+                weather_entry = value
+                break  # Found the first match, no need to search further
     except Exception as e:
         logging.warning(f"Could not match EXIF datetime '{dt_original_str}' to weather data: {e}")
-    logging.debug(f"No weather data found for prefix: {dt_hour_prefix}")
-    return None, None
+
+    if weather_entry:
+        logging.debug(f"Found weather match: {weather_entry}")
+        return weather_entry.get('temperature'), weather_entry.get('wind_speed')
+    else:
+        logging.debug(f"No weather data found for prefix: {dt_hour_prefix}")
+        return None, None
 
 def _get_contrasting_text_color(image: Image.Image, x: int, y: int, width: int, height: int) -> Tuple[int, int, int]:
     """Samples background and returns a contrasting grayscale color for text."""
@@ -215,7 +236,7 @@ def annotate_image(src_path: Path, dest_path: Path, dt_str: str, temp: Optional[
         with Image.open(src_path) as image:
             draw = ImageDraw.Draw(image)
             try:
-                font = ImageFont.truetype("Envy Code R", 24)
+                font = ImageFont.truetype("/usr/local/share/fonts/Envy-Code-R-PR7/Envy Code R.ttf", 24)
             except IOError:
                 logging.warning("Font 'Envy Code R' not found, using default.")
                 font = ImageFont.load_default()
@@ -257,11 +278,12 @@ def process_daily_directory(day_dir: Path, config: Config, weather_data: Dict):
 
     logging.info(f"Found {len(jpg_files)} JPG files to process.")
 
-    # Create a temporary directory for annotated images
-    with tempfile.TemporaryDirectory(prefix=f"{day_dir.name}-", dir=day_dir.parent) as temp_dir_str:
-        temp_dir = Path(temp_dir_str)
-        logging.debug(f"Created temporary directory for annotations: {temp_dir}")
-        
+    # Create a temporary directory for annotated images, which may be kept for inspection.
+    temp_dir_str = tempfile.mkdtemp(prefix=f"{day_dir.name}-", dir=day_dir.parent)
+    temp_dir = Path(temp_dir_str)
+    logging.debug(f"Created temporary directory for annotations: {temp_dir}")
+
+    try:
         # Annotate images and save to temp directory
         for idx, jpg_path in enumerate(jpg_files, start=1):
             try:
@@ -269,7 +291,7 @@ def process_daily_directory(day_dir: Path, config: Config, weather_data: Dict):
                 dt_original = exif_dict['Exif'].get(piexif.ExifIFD.DateTimeOriginal, b'').decode('utf-8')
             except Exception:
                 dt_original = ''
-            
+
             temp, wind = get_weather_for_timestamp(dt_original, weather_data)
             dest_jpg = temp_dir / f"img{idx:06d}.jpg"
             annotate_image(jpg_path, dest_jpg, dt_original, temp, wind)
@@ -291,6 +313,12 @@ def process_daily_directory(day_dir: Path, config: Config, weather_data: Dict):
 
         run_command(ffmpeg_cmd, log_prefix=f"[{day_dir.name}]")
         logging.info(f"Successfully created and published daily movie: {output_mp4}")
+    finally:
+        if not config.keep_temp_dir:
+            logging.debug(f"Removing temporary directory: {temp_dir}")
+            shutil.rmtree(temp_dir)
+        else:
+            logging.info(f"Keeping temporary directory for inspection: {temp_dir}")
 
 
 def create_monthly_video(config: Config):
