@@ -12,18 +12,15 @@ require 'awesome_print'
 require 'optparse'
 require 'optparse/time'
 
-$verbose=0
+$verbose=1
 
 class Weather
   CSV_DATA_DIR = '/var/lib/weather/goc'
   
-  # data points are pegged to 0/15/30/45 minutes
+  # data points are pegged to the full hour
   def normalize_instant(datum)
-    # minute = (datum.minute / 15) * 15
-    # puts DateTime.new(datum.year, datum.month, datum.day, datum.hour, minute, 0)
     instant = DateTime.new(datum.year, datum.month, datum.day, datum.hour, 0, 0).strftime('%Y-%m-%dT%H:%M:%S')
-    # STDERR.puts "(in normalize_instant) datum=#{datum}, instant=#{instant}"
-    # instant
+    instant
   end
 
   def initialize(year, month)
@@ -31,30 +28,27 @@ class Weather
     @weather = Hash.new({temperature: -999.9, wind: 0.0})
     csv_file = "#{CSV_DATA_DIR}/weather-#{'%04d' % year}-#{'%02d' % month}.csv"
 
-    # from_timestamp = (normalize_instant(from_timestamp))
-    # to_timestamp = (normalize_instant(to_timestamp))
-    puts "reading data from #{csv_file}" if $verbose > 0
-    CSV.foreach(csv_file, { converters: :all, col_sep: ';'}) do |row|
+    CSV.foreach(csv_file, col_sep: ';') do |row|
       inst = row[0]
 
       @weather[inst] = {temperature: row[1],
                         wind: row[2]}
-      # STDERR.puts "setting value: @weather['#{inst}'] { temperature: #{row[1]}, wind: #{row[2]} }"
     end
-    # ap @weather
   end
 
   def messwert(inst, messreihe)
-    # STDERR.puts "(in messwert) inst=#{normalize_instant(inst)}, messreihe=#{messreihe}"
     begin
       wert = @weather[normalize_instant(inst)][messreihe]
       if wert.nil?
-        # STDERR.puts "#{normalize_instant(inst)}/#{messreihe}: no data"
-        wert = -9999.99
+        case messreihe
+        when :wind
+          wert = 0.0
+        else
+          wert = -9999.99
+        end
       end
     rescue StandardError => e
       puts e
-      # STDERR.puts "inst=#{normalize_instant(inst)}, messreihe=#{messreihe}"
       wert = -9999.99
     end
     wert
@@ -154,6 +148,7 @@ end
 
 puts "found #{jpgs.size}" if $verbose > 0
 
+
 index=0
 jpgs.each do |jpg|
   s = `identify -format "%[EXIF:DateTimeOriginal]" #{jpg}`
@@ -165,7 +160,7 @@ jpgs.each do |jpg|
     ftime = File.stat(jpg)
     target_jpg = "#{target_dir}/tl#{'%06d' % index}.jpg"
     puts "#{jpg} #{timestamp.strftime("%Y-%m-%d %H:%M")} #{"%.1f" % temperature}°C #{"%.1f" % wind} km/h #{target_jpg}" if $verbose > 0
-    `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+38 \"temp: #{"%.1f" % temperature}°C\" -annotate +12+64 \"wind: #{"%.1f km/h" % wind}\" #{target_jpg}`
+    `convert #{jpg} -font \"#{FONT}\" -gravity NorthEast -undercolor graya\\(50\\%,0.5\\) -pointsize 24 -fill White -annotate +12+12 \"#{timestamp.strftime("%Y-%m-%d %H:%M")}\" -annotate +12+42 \"temp: #{"%.1f" % temperature}°C\" -annotate +12+72 \"wind: #{"%.1f km/h" % wind}\" #{target_jpg}`
     File.utime(ftime.atime, ftime.mtime, target_jpg)
     index += 1
   else
@@ -173,4 +168,3 @@ jpgs.each do |jpg|
     # break
   end
 end
-

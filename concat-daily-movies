@@ -15,6 +15,20 @@ else
 	exit
 fi
 
+if [ -f $MONTH-sound$EXT ]
+then
+  echo $MONTH-sound$EXT already exist.
+  rm -i $MONTH-sound$EXT
+  exit
+fi
+
+if [ -f $MONTH-month$EXT ]
+then
+  echo $MONTH-month$EXT already exist.
+  rm -i $MONTH-month$EXT
+  exit
+fi
+
 echo "#file list for concatenation" > mylist.txt
 \ls -1 *$EXT | while read line
 do echo file \'$line\' >> mylist.txt
@@ -27,5 +41,5 @@ else
   # assuming mp4
   ffmpeg -i $MONTH-month$EXT -i ~timelapse/archive/movies/sound/alles.mp3 -c copy -shortest $MONTH-sound$EXT
 fi
-echo monthnly movie in $MONTH-month$EXT
+echo monthly movie in $MONTH-month$EXT
 rm mylist.txt

@@ -6,20 +6,60 @@
 #
 # if not than restart connection
 #
+# echo on
+# set -x
 
-# check if there is Wifi USB dongle plugged in
-if lsusb | grep -q "Ralink"; then
-  # does it have an address?
-  IP=$(ifconfig wlan0 | grep "inet addr:" | cut -d":" -f2| cut -d" " -f1)
-  if [ ! -z "$IP" ]; then
-    logger -t "${0##*/}" up: $IP
-  else
-    logger -t "${0##*/}" "connection down! attempting reconnection"
-    echo "${0##*/}" "connection down! attempting reconnection"
-		ifconfig wlan0
-    ifdown --force wlan0
-    sleep 10
-    ifup --force wlan0
-    ifconfig wlan0
-  fi
+# --- Configuration ---
+PING_TARGET="192.168.1.1" # A reliable IP on the local network (e.g., router)
+WIFI_INTERFACE="wlan0"
+MAX_RETRIES=3
+RETRY_DELAY=15 # Seconds to wait after bringing interface up
+
+# --- Script ---
+SCRIPT_NAME="${0##*/}"
+
+# Detect if running in an interactive terminal.
+# This allows us to suppress output for cron and prevent reboots during manual runs.
+if [ -t 1 ]; then
+    IS_INTERACTIVE=true
+else
+    IS_INTERACTIVE=false
+fi
+
+# check if there is Wifi
+# does it have an address?
+if ping -c 1 -W 1 "$PING_TARGET" &> /dev/null; then
+        logger -t "$SCRIPT_NAME" "Connection to $PING_TARGET is up."
+        if $IS_INTERACTIVE; then
+            echo "Connection is up."
+        fi
+else
+        logger -t "$SCRIPT_NAME" "Connection down! Attempting reconnection..."
+        echo "$SCRIPT_NAME: Connection down! Attempting reconnection..."
+
+        for ((i=1; i<=MAX_RETRIES; i++)); do
+            logger -t "$SCRIPT_NAME" "Reconnection attempt $i of $MAX_RETRIES..."
+            echo "Reconnection attempt $i of $MAX_RETRIES..."
+
+            # Restart the interface
+            ip link set "$WIFI_INTERFACE" down
+            sleep 5
+            ip link set "$WIFI_INTERFACE" up
+            sleep "$RETRY_DELAY" # Wait for it to reconnect and get an IP
+
+            if ping -c 1 -W 1 "$PING_TARGET" &> /dev/null; then
+                logger -t "$SCRIPT_NAME" "Connection restored."
+                echo "Connection restored."
+                exit 0
+            fi
+        done
+
+        logger -t "$SCRIPT_NAME" "All reconnection attempts failed. Rebooting."
+        if $IS_INTERACTIVE; then
+            echo "All reconnection attempts failed. Would reboot if not in an interactive session."
+        else
+            echo "All reconnection attempts failed. Rebooting."
+            # This command requires root privileges.
+            /sbin/reboot
+        fi
 fi

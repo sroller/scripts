@@ -1,0 +1,99 @@
+#!/bin/bash
+# Script to process monthly timelapse data and weather information
+# Usage: monthly.sh [-m month] [-y year]
+# Example: monthly -m 01 -y 2023
+
+# set -x
+
+
+# Parse command-line arguments
+MONTH=""
+YEAR=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -m|--month)
+      MONTH="$2"
+      shift 2
+      ;;
+    -y|--year)
+      YEAR="$2"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+TIMEFORMAT='Script finished after %lR'
+time {
+
+MONTH=${MONTH:-$(date -d last-month +"%m")}
+YEAR=${YEAR:-$(date -d -last-month +"%Y")}
+
+# MONTH_DIR should match MONTH and YEAR
+MONTH_DIR=$(date -d "$YEAR-$MONTH-01" +"%m-%B")
+
+WEATHER_DATA_FILE=/var/lib/weather/goc/weather-$YEAR-$MONTH.csv 
+TIMELAPSE_SRC_DIR=/srv/timelapse/io
+TIMELAPSE_DST_DIR=/usb_drives/my_book/archive/timelapse
+
+MONTH=${MONTH:-$(date -d last-month +"%m")}
+YEAR=${YEAR:-$(date -d -last-month +"%Y")}
+MONTH_DIR=${MONTH_DIR:-$(date -d last-month +"%m-%B")}
+WEATHER_DATA_FILE=/var/lib/weather/goc/weather-$YEAR-$MONTH.csv 
+TIMELAPSE_SRC_DIR=/srv/timelapse/io
+TIMELAPSE_DST_DIR=/usb_drives/my_book/archive/timelapse
+
+canweather -v -m $MONTH -y $YEAR
+
+if [ ! -f $WEATHER_DATA_FILE ]; then
+  echo $WEATHER_DATA_FILE not found
+  exit
+fi
+
+WEATHER_DATA=$(tail -1 $WEATHER_DATA_FILE | awk -F';' '{ print $2 }')
+
+# last list in weather data file is empty
+# data wasn't - yet - read from Environment Canada
+if [ -z "$WEATHER_DATA" ]; then
+  echo weather data for month $MONTH not complete
+  echo try again later
+  exit
+fi
+
+
+cd $TIMELAPSE_SRC_DIR
+RIVER=$TIMELAPSE_DST_DIR/river/$YEAR/$MONTH_DIR
+mkdir -p $RIVER
+
+cd $TIMELAPSE_SRC_DIR
+
+tar c $YEAR$MONTH* | tar -C $RIVER -xv
+
+cd $RIVER
+find -maxdepth 1 -type d -name "$YEAR$MONTH*" | xargs -l create-archive
+
+exit
+
+cd ~timelapse/archive/movies/webm/river/$YEAR/$MONTH_DIR
+concat-daily-movies
+cd ~timelapse/archive/movies/x265/river/$YEAR/$MONTH_DIR
+concat-daily-movies
+
+
+# cd $STREET
+# find -maxdepth 1 -type d -name "$YEAR$MONTH*" | xargs -l create-archive
+
+# cd ~/archive/movies/webm/street/$YEAR/$MONTH_DIR
+# concat-daily-movies
+# cd ~/archive/movies/x265/street/$YEAR/$MONTH_DIR
+# concat-daily-movies
+
+echo done!
+echo you can probably delete directories under $(realpath ~timelapse/timelapse/river)/$YEAR$MONTH\*
+echo and $(realpath ~timelapse/timelapse/street/)/$YEAR$MONTH\*
+
+}
+

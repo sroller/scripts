@@ -2,13 +2,15 @@
 #
 # creates a movie from all pictures of the motion detection camera
 
-CWD=$(pwd)
-DIR=$(basename $CWD)
+# set -x
+
+# CWD=$(pwd)
+WORKDIR=.
 FRAMERATE=${FRAMERATE:-50}
 MACHINE=${MACHINE:europe}
 
 function usage {
-    echo "usage $0 [-m MACHINE ]"
+  echo "usage: $(basename $0) [-m MACHINE ] [-r framerate] [-d workdir]"
     exit
 }
 
@@ -17,27 +19,52 @@ if [[ ${#} -eq 0 ]]; then
   usage
 fi
 
-while getopts "m:h" arg; do
+while getopts ":m:r:hd:" arg; do
   case "${arg}" in
     m)
       MACHINE=$OPTARG
       ;;
+    r)
+      FRAMERATE=$OPTARG
+      ;;
+    d)
+      WORKDIR=$OPTARG
+      ;;
     h)
       usage
       ;;
+    ?)
+      echo unknown option $OPTARG
+      usage
   esac
 done
 
-echo Environment
-echo ------------------------
-echo FRAMERATE=$FRAMERATE
-echo DIR=$DIR
-echo MACHINE=$MACHINE
-echo ------------------------
-echo .
+pushd $WORKDIR > /dev/null
 
-ffmpeg -hide_banner -v info -r $FRAMERATE -f image2 -pattern_type glob -i '**/*.jpg' -c:v libx264 -preset slower -b:v 1500k -r $FRAMERATE $DIR.mp4
+DIR=$(basename $(pwd))
+
+# echo Environment
+# echo ------------------------
+# echo FRAMERATE=$FRAMERATE
+# echo DIR=$DIR
+# echo WORKDIR=$WORKDIR
+# echo MACHINE=$MACHINE
+# echo ------------------------
+# echo .
+
+ffmpeg -y -hide_banner -v error -r $FRAMERATE -f image2 -pattern_type glob -i '**/*[0-9].jpg' -c:v libx264 -preset slower -b:v 1500k -r $FRAMERATE $DIR.mp4
+
+if [ $? -eq 0 ]
+then
+mv $DIR.mp4 /sdb/www/motions/$MACHINE
 
 mailx -s "Daily Motion $DIR" steffen.roller@gmail.com <<EOM
-new daily motion in https://rathaus.vineta.ca/privat/$MACHINE/motion/pictures/$DIR/$DIR.mp4
+new daily motion in https://rathaus.vineta.ca/motions/$MACHINE/$DIR.mp4
+local path /sdb/www/motions/$MACHINE/$DIR.mp4
 EOM
+# echo move $DIR.mp4 created
+
+fi
+
+popd > /dev/null
+

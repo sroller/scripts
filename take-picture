@@ -1,0 +1,8 @@
+#!/bin/bash
+
+OUTPUT_DIR=/nfs/timelapse/$HOSTNAME/Pictures
+mkdir -p $OUTPUT_DIR
+PIC=$(date +"%Y%m%d_%H%M%S").jpg
+echo "saving picture $OUTPUT_DIR/IMG_$PIC.jpg"
+sudo -u timelapse libcamera-still -v 0 -o $OUTPUT_DIR/IMG_$PIC.jpg
+

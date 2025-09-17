@@ -1,11 +1,12 @@
 #!/bin/bash
 
 # set -x
+source $HOME/.rvm/environments/ruby-3.1.3
 
 cd ~timelapse/timelapse/river
-# echo $(pwd)
-INTERVAL=120 create-24h-movie $(date -d "yesterday" +%Y%m%d)
+VERBOSE=0 INTERVAL=120 create-24h-movie $(date -d "yesterday" +%Y%m%d)
+
 cd ~timelapse/timelapse/street
 # echo $(pwd)
-# INTERVAL=120 MOVIES=~timelapse/pi1/movies create-24h-movie $(date -d "yesterday" +%Y%m%d)
+VERBOSE=0 INTERVAL=120 MOVIES=~timelapse/ganymede/movies create-24h-movie $(date -d "yesterday" +%Y%m%d)
 

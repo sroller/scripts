@@ -1,0 +1,4 @@
+#!/bin/bash
+set -x
+sudo du -hcS / --exclude=/proc --exclude=/tmp --exclude=/run | sort -rh > ~/.local/tmp/du-$(date +%Y%m%d_%H%M%S).txt
+

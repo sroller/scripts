@@ -1,0 +1,17 @@
+#!/bin/bash
+# set -x
+
+CSV=speedtest-$(date +%Y%m%d_%H%M%S).csv
+SECS=601
+
+echo "running speedtest every $SECS seconds and write to ~/var/lib/$CSV"
+
+echo "\"timestamp\",\"server name\",\"server id\",\"idle latency\",\"idle jitter\",\"packet loss\",\"download\",\"upload\",\"download bytes\",\"upload bytes\",\"share url\",\"download server count\",\"download latency\",\"download latency jitter\",\"download latency low\",\"download latency high\",\"upload latency\",\"upload latency jitter\",\"upload latency low\",\"upload latency high\",\"idle latency low\",\"idle latency high\"" > ~/var/lib/$CSV
+
+while true
+do
+    echo -n "."
+    echo -n "\"$(date +%Y%m%dT%H%M%S),\"" >> ~/var/lib/$CSV
+    /snap/speedtest/9/speedtest -f csv  >> ~/var/lib/$CSV
+    sleep $SECS
+done 

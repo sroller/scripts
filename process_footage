@@ -1,0 +1,93 @@
+#!/bin/bash
+
+set +x
+
+# Default values
+REMOVE=false
+
+# Parse options using GNU getopt
+ARGS=$(getopt -o r --long remove,help -- "$@")
+if [ $? -ne 0 ]; then
+  echo "Failed to parse arguments." >&2
+  exit 1
+fi
+eval set -- "$ARGS"
+
+# Extract options and arguments
+while true; do
+  case "$1" in
+    -r|--remove)
+      REMOVE=true
+      shift
+      ;;
+    --help)
+      echo "Usage: $0 [options] <camera>"
+      echo ""
+      echo "Options:"
+      echo "  -r, --remove     Delete input directory after processing"
+      echo "  --help           Show this help message"
+      echo ""
+      echo "Cameras: callisto | ganymede"
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      echo "Unexpected option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+# Get the required camera name argument
+CAMERA_NAME="$1"
+if [[ -z "$CAMERA_NAME" || ( "$CAMERA_NAME" != "callisto" && "$CAMERA_NAME" != "ganymede" &&  "$CAMERA_NAME" != "phobos" ) ]]; then
+  echo "Error: Missing or invalid camera name."
+  echo "Usage: $0 [options] <camera>"
+  echo "Use --help for more information."
+  exit 1
+fi
+
+# Setup variables
+DAY=$(date -d "yesterday" +%Y%m%d)
+INPUT_DIR="/srv/motion/$CAMERA_NAME/movies/$DAY"
+CAPITALIZED_NAME="$(tr '[:lower:]' '[:upper:]' <<< ${CAMERA_NAME:0:1})${CAMERA_NAME:1}"
+OUTPUT_FILE="/seagate/www/rathaus/html/movies/$CAPITALIZED_NAME/$DAY.mp4"
+URL="https://rathaus.vineta.ca/movies/$CAPITALIZED_NAME/$DAY.mp4"
+
+# Camera-specific email subject
+case "$CAMERA_NAME" in
+  callisto)
+    EMAIL_SUBJECT="Daily video from the driveway camera"
+    ;;
+  ganymede)
+    EMAIL_SUBJECT="Daily video from the back yard camera"
+    ;;
+esac
+
+# Run the processing command
+/barracuda/home/steffenr/.virtualenvs/opencv/bin/python /home/steffenr/src/python_ai/ChatGPT/combine_footage/process_videos.py --input "$INPUT_DIR" --output "$OUTPUT_FILE"
+STATUS=$?
+
+if [ $STATUS -eq 0 ]; then
+  echo "Processing succeeded"
+
+  if [ "$REMOVE" = true ]; then
+    echo "Removing directory $INPUT_DIR"
+    sudo rm -rf "$INPUT_DIR"
+  else
+    echo "Skipping removal of $INPUT_DIR"
+  fi
+
+  df -h | egrep "(barracuda|seagate)"
+  echo "view/download from $URL"
+  mailx -s "$EMAIL_SUBJECT" steffen.roller@gmail.com,sroller@opentext.com <<EOM
+view/download from $URL
+EOM
+
+else
+  echo "An error occurred, exiting"
+fi
+

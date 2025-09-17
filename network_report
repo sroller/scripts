@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+require 'csv'
+
+CSV.foreach(ARGV[0]) do |row|
+  # puts row
+  puts "%.1f mb download, %.1f mb upload" % [row[5].to_f / 1024**2, row[6].to_f / 1024**2]
+end
+
