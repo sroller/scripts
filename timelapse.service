@@ -1,5 +1,5 @@
 [Unit]
-After=nfs.mount
+; After=nfs.mount
 
 [Service]
 ExecStart=/usr/local/bin/timelapse -t 60000 -n start
