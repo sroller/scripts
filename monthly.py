@@ -33,6 +33,7 @@ from PIL import Image, ImageDraw, ImageFont
 class Config:
     """Holds all configuration parameters for the timelapse script."""
     month: int
+    month_long_name: str
     year: int
     base_dir: Path
     archive_dir: Path
@@ -40,6 +41,8 @@ class Config:
     weather_data_file: Path
     ffmpeg_framerate: int = 24
     ffmpeg_bitrate: str = "5000k"
+    ffmpeg_pix_fmt: str = "yuv420p10le"
+    ffmpeg_crf: str = "42"
     ffmpeg_codec: str = "libsvtav1" # Or "libx264" for wider compatibility
     verbose: bool = False
     quiet: bool = False
@@ -87,6 +90,7 @@ def setup_config() -> Config:
 
     return Config(
         month=month,
+        month_long_name=month_long_name,
         year=year,
         base_dir=args.dir,
         archive_dir=archive_dir,
@@ -168,7 +172,7 @@ def archive_source_images(config: Config):
 
     config.archive_dir.mkdir(parents=True, exist_ok=True)
     prefix = f"{config.year}{config.month:02d}"
-    
+
     daily_dirs = [d for d in config.base_dir.iterdir() if d.is_dir() and d.name.startswith(prefix)]
 
     if not daily_dirs:
@@ -176,13 +180,40 @@ def archive_source_images(config: Config):
         sys.exit(1)
 
     logging.info(f"Archiving {len(daily_dirs)} daily directories from {config.base_dir} to {config.archive_dir}.")
+
     for src_dir in sorted(daily_dirs):
         dest_dir = config.archive_dir / src_dir.name
         logging.info(f"Copying {src_dir} to {dest_dir}...")
-        # Use shutil.copy2 to preserve file metadata (like modification times).
-        # This is important for keeping the original timestamps on the archived images.
-        shutil.copytree(src_dir, dest_dir, copy_function=shutil.copy2,
-                        dirs_exist_ok=True, ignore=shutil.ignore_patterns('galerie.html'), symlinks=False)
+
+        # Ensure destination directory exists
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        # Use tar pipe for fast copying, excluding galerie.html
+        tar_create = subprocess.Popen(
+            ["tar", "-C", str(src_dir), "-cf", "-", 
+             "--exclude=galerie.html", "."],
+            stdout=subprocess.PIPE
+        )
+        tar_extract = subprocess.Popen(
+            ["tar", "-C", str(dest_dir), "-xf", "-"],
+            stdin=tar_create.stdout
+        )
+
+        tar_create.stdout.close()
+
+        tar_extract.communicate()
+
+        tar_create.wait()
+
+        # create_out, create_err = tar_create.communicate()
+        # extract_out, extract_err = tar_extract.communicate()
+
+
+        if tar_create.returncode != 0 or tar_extract.returncode != 0:
+            logging.error(f"Failed to copy {src_dir} to {dest_dir}, create={tar_create.returncode}, dest={tar_extract.returncode}")
+            raise subprocess.CalledProcessError(1, "tar pipe")
+
+        # break # for debugging only
 
 def get_weather_for_timestamp(dt_original_str: str, weather_data: Dict) -> Tuple[Optional[float], Optional[int]]:
     """Matches an EXIF timestamp string to the closest hourly weather data."""
@@ -246,6 +277,7 @@ def annotate_image(src_path: Path, dest_path: Path, dt_str: str, temp: Optional[
             temp_display = f"Temp: {temp}°C" if temp is not None else "Temp: N/A"
             wind_display = f"Wind: {wind} km/h" if wind is not None else "Wind: N/A"
             lines = [dt_display, temp_display, wind_display]
+            logging.debug(lines)
 
             # Calculate position
             line_height = font.getbbox("Tg")[3] # Height of a tall character
@@ -289,12 +321,21 @@ def process_daily_directory(day_dir: Path, config: Config, weather_data: Dict):
             try:
                 exif_dict = piexif.load(str(jpg_path))
                 dt_original = exif_dict['Exif'].get(piexif.ExifIFD.DateTimeOriginal, b'').decode('utf-8')
+                # print(f"{jpg_path} - '{dt_original}'\n")
+                if dt_original:
+                    dt = datetime.strptime(dt_original, "%Y:%m:%d %H:%M:%S")
+                    formatted_date = "%04d-%02d-%02d %02d:%02d:%02d" % (dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
+                    # print(f"formatted: {formatted_date}\n");
+                else:
+                    formatted_date = ''
             except Exception:
                 dt_original = ''
+                formatted_date = ''
 
             temp, wind = get_weather_for_timestamp(dt_original, weather_data)
+            # print(f"temp={temp}, wind={wind}\n")
             dest_jpg = temp_dir / f"img{idx:06d}.jpg"
-            annotate_image(jpg_path, dest_jpg, dt_original, temp, wind)
+            annotate_image(jpg_path, dest_jpg, formatted_date, temp, wind)
 
         # Create daily movie with ffmpeg
         output_mp4 = config.publish_dir / f"{day_dir.name}.mp4"
@@ -303,8 +344,8 @@ def process_daily_directory(day_dir: Path, config: Config, weather_data: Dict):
             "-framerate", str(config.ffmpeg_framerate),
             "-i", str(temp_dir / "img%06d.jpg"),
             "-c:v", config.ffmpeg_codec,
-            "-b:v", config.ffmpeg_bitrate,
-            "-pix_fmt", "yuv420p", # for compatibility
+            "-crf", config.ffmpeg_crf,
+            "-pix_fmt", config.ffmpeg_pix_fmt,
             str(output_mp4)
         ]
         if config.nice_level > 0 and shutil.which("nice"):
@@ -339,7 +380,7 @@ def create_monthly_video(config: Config):
         for mp4 in daily_mp4s:
             f.write(f"file '{mp4.resolve()}'\n")
 
-    month_mp4_path = config.publish_dir / f"{prefix}-monthly-timelapse.mp4"
+    month_mp4_path = config.publish_dir / f"{config.year}-{config.month}-monthly-timelapse.mp4"
     ffmpeg_concat_cmd = [
         "ffmpeg", "-y",
         "-f", "concat",
@@ -363,11 +404,11 @@ def main():
     
     config = setup_config()
     setup_logging(config.verbose, config.quiet)
-    logging.info(f"Starting timelapse processing for {config.year}-{config.month:02d}")
+    logging.info(f"Starting timelapse processing for {config.year}-{config.month_long_name}")
     logging.debug(f"Using configuration: {config}")
 
     # 1. Archive source images
-    archive_source_images(config)
+    # archive_source_images(config)
 
     # 2. Load weather data
     weather_data = load_weather_data(config.weather_data_file)
