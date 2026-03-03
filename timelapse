@@ -1,144 +1,222 @@
 #!/bin/bash
 
 # starts a timelapse process in the background
-
 # first parameter has to be start or stop
 # the following parameter will be appended to the libcamera-still command
 
+set -euo pipefail
+
 BASE=/nfs/timelapse/$HOSTNAME
+CONFIG_DIR="$HOME/tmp"
+MOUNT_TIMEOUT=5
+MOUNT_MAX_TRIES=10
+DEFAULT_INTERVAL=60000
+DEFAULT_WIDTH=1920
+DEFAULT_HEIGHT=1080
 
-function help {
-  SCRIPT=${0##*/}
+# Default configuration
+EXPOSURE_MODE="night"
+TIMELAPSE_INTERVAL="$DEFAULT_INTERVAL"
+WIDTH="$DEFAULT_WIDTH"
+HEIGHT="$DEFAULT_HEIGHT"
+FLIP_FLAGS=""
+OUTPUT_DIR="$HOME/timelapse"
+
+SCRIPT_NAME="${0##*/}"
+
+#######################################
+# Print usage information
+#######################################
+usage() {
+  cat <<EOF
+Usage: $SCRIPT_NAME [options] <command>
+
+Controls libcamera-still timelapse recording.
+
+Options:
+  -n              Night exposure mode
+  -t INTERVAL     Set timelapse interval in milliseconds (default: $DEFAULT_INTERVAL)
+  -w WIDTH        Set output width (default: $DEFAULT_WIDTH)
+  -h HEIGHT       Set output height (default: $DEFAULT_HEIGHT)
+  -d DIRECTORY    Set output directory (default: $OUTPUT_DIR)
+  -u              Upside-down mode (flip vertically and horizontally)
+  -h, --help      Show this help message
+
+Commands:
+  start    Begin timelapse recording
+  stop     Stop timelapse recording
+EOF
+  exit 0
+}
+
+#######################################
+# Print status information
+#
+# @param boolean $1 - Whether process is running
+#######################################
+print_status() {
+  local is_running="$1"
   echo
-  if [ ! -z "$PID" ]; then
-    echo "     libcamera-still is running on host $(hostname)"
-    echo "     PID: $PID"
-    echo "     output to $(cat ~/tmp/timelapse.dir)"
+
+  if [ "$is_running" = true ]; then
+    echo "libcamera-still is running on host $(hostname)"
+    echo "PID: $PID"
+    echo "Output: $(cat "$CONFIG_DIR/timelapse.dir" 2>/dev/null || echo "unknown")"
     echo
-    echo "     type '$SCRIPT stop' to end timelapse recording"
+    echo "Type '$SCRIPT_NAME stop' to end timelapse recording"
   else
-	  echo "     libcamera-still is not running on host $(hostname)"
+    echo "libcamera-still is not running on host $(hostname)"
     echo
-    echo "     type '$SCRIPT start' to begin timelapse"
+    echo "Type '$SCRIPT_NAME start [options]' to begin timelapse"
   fi
-  exit
+  exit 0
 }
 
-# check if the nfs mount is available
-function mounted () {
-	MAXTRIES=10
-	WAIT=5
-	COUNTER=0
-	until mountpoint /nfs
-	do
-		echo "$COUNTER: wait for $WAIT seconds"
-		/bin/sleep $WAIT
-		COUNTER=$((COUNTER+1))
-		if [ $COUNTER -gt $MAXTRIES ]; then
-			echo "/nfs is not a mountpoint, exiting ..."
-			exit 1
-		fi
-	done
-
+#######################################
+# Wait for NFS mount to be available
+#######################################
+wait_for_nfs_mount() {
+  local tries=0
+  while ! mountpoint -q /nfs; do
+    ((tries++))
+    if [ $tries -gt $MOUNT_MAX_TRIES ]; then
+      echo "Error: /nfs mount not available after $((MOUNT_TIMEOUT * MOUNT_MAX_TRIES)) seconds"
+      exit 1
+    fi
+    echo "Waiting for /nfs mount... ($tries/$MOUNT_MAX_TRIES)"
+    sleep "$MOUNT_TIMEOUT"
+  done
 }
 
-# default parameter
-EX=night
-TL=60000
-WIDTH=1920
-HEIGHT=1080
-FLIP=
-OUTPUTDIR=~/timelapse
+#######################################
+# Parse command line arguments
+#######################################
+parse_args() {
+  while getopts ":n t:w:h:d:u" opt; do
+    case "$opt" in
+      n)  EXPOSURE_MODE="night" ;;
+      t)  TIMELAPSE_INTERVAL="$OPTARG" ;;
+      w)  WIDTH="$OPTARG" ;;
+      h)  HEIGHT="$OPTARG" ;;
+      d)  OUTPUT_DIR="$OPTARG" ;;
+      u)  FLIP_FLAGS="-vf -hf" ;;
+      \?) echo "Invalid option: -$OPTARG"; exit 1 ;;
+    esac
+  done
+  shift $((OPTIND - 1))
+}
 
-while getopts ":nut:w:h:d:" opt; do
-  case $opt in
-    d)
-      echo OUTPUTDIR $OPTARG
-      OUTPUTDIR=$OPTARG
+#######################################
+# Start timelapse recording
+#######################################
+start_timelapse() {
+  # Check if already running
+  if [ -n "$PID" ]; then
+    echo "Warning: libcamera-still is already running (PID: $PID)"
+    return 1
+  fi
+
+  # Ensure NFS is mounted
+  wait_for_nfs_mount
+
+  # Create directory structure
+  local day_dir="$OUTPUT_DIR/$(date +%Y%m%d)"
+  local timestamp=$(date +%Y%m%d-%H%M)
+  local output_dir="$day_dir/$timestamp"
+
+  mkdir -p "$day_dir" "$output_dir" "$CONFIG_DIR"
+
+  # Store output directory for status checks
+  echo "$day_dir" > "$CONFIG_DIR/timelapse.dir"
+
+  # Set up pictures directory
+  local photos_dir="$HOME/pictures"
+  mkdir -p "$photos_dir"
+
+  # Start libcamera-still in background
+  echo "Starting libcamera-still..."
+  libcamera-still \
+    --verbose 0 \
+    --width "$WIDTH" \
+    --height "$HEIGHT" \
+    --ex "$EXPOSURE_MODE" \
+    --timelapse "$TIMELAPSE_INTERVAL" \
+    $FLIP_FLAGS \
+    -n -t 0 \
+    --latest "$photos_dir/last.jpg" \
+    --output "$output_dir/tl%06d.jpg" \
+    "$@" &
+
+  # Create symlink to web gallery
+  local gallery_link="$output_dir/index.html"
+  local gallery_target="$HOME/www/jq-galerie/galerie.html"
+  if [ -f "$gallery_target" ]; then
+    ln -sf "$gallery_target" "$gallery_link"
+  fi
+
+  echo "libcamera-still started (PID: $PID)"
+  echo "Stop with: $SCRIPT_NAME stop"
+  echo "Output directory: $output_dir"
+}
+
+#######################################
+# Stop timelapse recording
+#######################################
+stop_timelapse() {
+  if [ -z "$PID" ]; then
+    echo "libcamera-still is not running"
+    return 1
+  fi
+
+  kill "$PID"
+  echo "Stopped libcamera-still (PID: $PID)"
+  echo "Output: $(cat "$CONFIG_DIR/timelapse.dir" 2>/dev/null || echo "unknown")"
+}
+
+#######################################
+# Main execution
+#######################################
+
+# Parse global options first
+TEMP_OPTS=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -n|-t|-w|-h|-d|-u)
+      TEMP_OPTS="$TEMP_OPTS $1"
+      shift
       ;;
-    n)
-      echo "night start"
-      EX="night"
+    -*)
+      TEMP_OPTS="$TEMP_OPTS $1"
+      shift
       ;;
-    t)
-      echo "interval $OPTARG"
-      TL=$OPTARG
-      ;;
-    w)
-      echo "width $OPTARG"
-      WIDTH=$OPTARG
-      ;;
-    h)
-      echo "height $OPTARG"
-      HEIGHT=$OPTARG
-      ;;
-    u)
-      echo "upside down mode"
-      FLIP="-vf -hf"
-      ;;
-    \?)
-      echo "invalid option: -$OPTARG"
+    *)
+      break
       ;;
   esac
 done
-shift $((OPTIND-1))
 
-CMD=$1
-shift
+# Set up options for parsing
+set -- $TEMP_OPTS "$@"
+parse_args "$@"
 
-echo libcamera-still --width $WIDTH --height $HEIGHT -ex $EX --timelapse $TL $CMD
+# Get the command
+CMD="${1:-}"
 
-
+# Check if process is running
 PID=$(pgrep libcamera-still)
-if [ "$CMD" = "start" ] || [ "$CMD" = "stop" ]
-then
 
-  case "$CMD" in
-    stop)
-
-      if [ -z "$PID" ]
-      then
-        echo libcamera-still is not running
-      else
-        kill $PID
-        echo we stopped libcamera-still with pid: $PID
-        echo
-        echo "go to $(cat ~/tmp/timelapse.dir) for the output"
-      fi
-      ;;
-
-    start)
-      if [ ! -z "$PID" ]
-      then
-        echo "found running libcamera-still, pid $PID"
-      else
-	mounted "~/timelapse"
-        DAYDIR=$OUTPUTDIR/`date +%Y%m%d`
-        mkdir -p $DAYDIR
-        DIR=$DAYDIR/`date +%Y%m%d-%H%M`
-        mkdir -p $DIR
-        mkdir -p ~/tmp
-        echo $DAYDIR > ~/tmp/timelapse.dir
-        FOTOS=~/pictures
-        mkdir -p $DIR
-	set -x
-        libcamera-still --verbose 0 --width $WIDTH --height $HEIGHT --timelapse $TL $FLIP -n -t 0 --latest $FOTOS/last.jpg --output $DIR/tl%06d.jpg $* &
-	ln -s ~steffenr/www/jq-galerie/galerie.html $DIR
-	set +x
-        echo libcamera-still started
-        echo stop with: timelapse stop
-        echo output directory: $DIR
-      fi
-      ;;
-
-    *)
-      SCRIPTNAME=${0##*/}
-      echo "$SCRIPTNAME start|stop"
-
-      ;;
-  esac
-
-else
-  help
-fi
-
+case "$CMD" in
+  start)
+    start_timelapse "$@"
+    ;;
+  stop)
+    stop_timelapse
+    ;;
+  -h|--help|"")
+    usage
+    ;;
+  *)
+    # If no valid command, show status
+    print_status [ -n "$PID" ]
+    ;;
+esac
