@@ -1,246 +1,413 @@
-#!/bin/bash
+#!/usr/bin/env ruby
+
+# Create a movie from image sequences or video files using ffmpeg
+# Usage: mkmov [options]
 #
+# Creates movies from timelapse images (tl%06d.jpg) or video files
+# Supports multiple codecs: x264, x265/hevc, vp9, iphone, nvenc variants
 
-if [ -n "$DEBUG" ]; then
-  set -x
-fi
+require 'optparse'
+require 'fileutils'
+require 'pathname'
+require 'date'
 
+# Configuration
+VALID_CODECS = %w[x264 x265 hevc vp9 iphone libsvtav1 264_nvenc hevc_nvenc av1_nvenc].freeze
+VALID_PRESETS = %w[ultrafast superfast veryfast faster fast medium slow slower veryslow].freeze
+VALID_LOG_LEVELS = %w[quiet panic fatal error warning info verbose debug].freeze
 
-renice -n 10 $$ > /dev/null      # reduce priority
-
-START_TIME=$SECONDS
-
-# defaults
-WIDTH=1920
-BITRATE=5000k
-QUALITY=20
-TWOPASS=0
-FRAMERATE=24
-PRESET=${PRESET:-medium}
-LOG_LEVEL=${LOG_LEVEL:-error}
-VERBOSE=${VERBOSE:-0}
-CODEC=x264
-
-THREADS=4
-
-function help {
-  cat <<- EOH
-  help is nigh
-
-  mkmov - make a movie from different sources
-  options:
-    -c CODEC (default: $CODEC) [x264, x265, hevc, vp9, iphone]
-    -i INPUT if empty then we'll interpret turn a directory of files into a movie
-    -w WIDTH (default: $WIDTH), maintains aspect ratio
-    -v LOG_LEVEL (default: $LOG_LEVEL) passthru to ffmpeg
-    -q QUALITY (default: $QUALITY) passthru for CRF to ffmpeg
-    -b BITRATE (default: $BITRATE) passthru for ffmpeg
-    -r FRAMERATE (default: $FRAMERATE) passthru for ffmpeg
-    -2 enables two-pass mode
-    -p PRESET (default:$PRESET) only used for x264
-
-  start with
-
-      DEBUG=1 $(basename $0) ...
-
-  to enable debugging
-
-EOH
-exit
+# Options hash with defaults
+options = {
+  codec: 'x264',
+  input: nil,
+  width: 1920,
+  quality: 20,
+  bitrate: '5000k',
+  framerate: 24,
+  preset: 'medium',
+  log_level: 'error',
+  threads: 4,
+  twopass: false,
+  verbose: false,
+  debug: false
 }
 
-while getopts c:w:hvq:b:2r:p:i: opt; do
-  case $opt in
-    c)
-      CODEC=$OPTARG
-      ;;
-    i)
-      INPUT=$OPTARG
-      ;;
-    w)
-      WIDTH=$OPTARG
-      ;;
-    h)
-      help
-      ;;
-    v)
-      LOG_LEVEL=info
-      VERBOSE=1
-      ;;
-    q)
-      QUALITY=$OPTARG
-      ;;
-    b)
-      BITRATE=$OPTARG
-      ;;
-    2)
-      TWOPASS=1
-      ;;
-    r)
-      FRAMERATE=$OPTARG
-      ;;
-    p)
-      echo possible values: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
-      PRESET=$OPTARG
-      ;;
-    *)
-      help
-      ;;
-  esac
-done
+# Help text lambda (defined before use)
+print_help_lambda = lambda do |opts|
+  puts <<-HELP
+Usage: mkmov [options]
 
-if [ "$#" -eq 0 ]; then
-  help
-fi
+Creates a movie from image sequences (tl%06d.jpg) or video files using ffmpeg.
 
+Options:
+  -c CODEC, --codec=CODEC      Video codec (default: x264)
+                               Valid: x264, x265, hevc, vp9, iphone, libsvtav1, 264_nvenc, hevc_nvenc, av1_nvenc
+  -i INPUT, --input=INPUT      Input file (required for iphone codec)
+  -w WIDTH, --width=WIDTH      Output width in pixels (default: 1920, maintains aspect ratio)
+  -q QUALITY, --quality=QUALITY
+                               CRF quality value (default: 20, lower = better quality)
+  -b BITRATE, --bitrate=BITRATE
+                               Bitrate for ffmpeg (default: 5000k)
+  -r FRAMERATE, --framerate=FRAMERATE
+                               Framerate (default: 24)
+  -p PRESET, --preset=PRESET   Encoding preset (default: medium)
+                               Valid: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
+  -l LOG_LEVEL, --log-level=LOG_LEVEL
+                               ffmpeg log level (default: error)
+                               Valid: quiet, panic, fatal, error, warning, info, verbose, debug
+  -t THREADS, --threads=THREADS
+                               Number of threads (default: 4)
+  -2, --twopass                Enable two-pass encoding
+  -v, --verbose                Enable verbose output
+  -d, --debug                  Enable debug mode
+  -h, --help                   Show this help message
 
+Examples:
+  mkmov -c x264
+  mkmov -c x264 -w 1280 -q 15 -p veryfast
+  mkmov -c vp9 -2 -r 30
+  mkmov -c hevc -w 1920 -q 23 -b 3500k
+  mkmov -c iphone -i video.MTS
+  mkmov -c x264 -v
 
-if  [ "$CODEC" != "iphone" ]; then
-    if true; then
-      DATUM=$(ls -1 *.jpg | head -n 1 | xargs stat -c"%y" | cut -b1-10)
-      FDATE=$DATUM
-    else
-      echo "couldn't find jpg file"
-      echo "wrong directory?"
-      exit
-    fi
-fi
+Environment Variables:
+  None (all configuration via CLI flags)
 
-if  [ "$CODEC" == "iphone" ]; then
-	FDATE=$(stat -c"%y" $INPUT|cut -b1-10)
-	DATUM=$(stat -c"%y" $INPUT|cut -b1-10|perl -npe "s/(\d+)\-(\d+)\-(\d+)/\3.\2.\1/")
-	# echo $FDATE
-	# echo $DATUM
-fi
+Output:
+  Creates a movie file named: {FDATE}-{CODEC}-q{QUALITY}-b{BITRATE}-w{WIDTH}-fr{FRAMERATE}.mp4/webm
+  Where FDATE is extracted from the first input file's modification date.
+HELP
+end
 
-if  [ "$CODEC" != "libx264" ] && 
-  [ "$CODEC" != "x264_nvenc" ] && 
-  [ "$CODEC" != "libx265" ] && 
-  [ "$CODEC" != "hevc_nvenc" ] && 
-  [ "$CODEC" != "av1_nvenc" ] && 
-  [ "$CODEC" != "libsvtav1" ] && 
-  [ "$CODEC" != "iphone" ] &&  # not really a codec though
-  [ "$CODEC" != "vp9" ]
-then
-  echo unknown codec
-  echo valid parameters are x264, x265, iphone, hevc, vp9, 264_nvenc, hevc_nvenc
-  exit
-fi
+# Parse command line options
+option_parser = OptionParser.new do |opts|
+  opts.banner = "Usage: mkmov [options]"
 
-# shift
+  opts.separator ""
+  opts.separator "Creates a movie from image sequences (tl%06d.jpg) or video files using ffmpeg."
+  opts.separator ""
 
-if [ "$VERBOSE" == "1" ]; then
-  # log effective parameters
-  echo input file     : $INPUT
-  echo width          : $WIDTH
-  echo log level      : $LOG_LEVEL
-  echo quality for CRF: $QUALITY
-  echo bitrate        : $BITRATE
-  echo framerate      : $FRAMERATE fps
-  echo preset         : $PRESET
-  echo two pass       : $TWOPASS
-fi
+  opts.on('-c', '--codec CODEC', "Video codec (default: x264)") do |v|
+    options[:codec] = v
+  end
 
-# movie sizing independent from picture size
-SIZING="-vf scale=$WIDTH:-1"
-OPT="-y -v $LOG_LEVEL -hide_banner"
-MOVIE=$FDATE-$CODEC-q$QUALITY-b$BITRATE-w$WIDTH-fr$FRAMERATE
-MAUTHOR="Steffen Roller <steffen.roller@gmail.com>" 
-MYEAR="(c) by Steffen Roller $(date +%Y)" 
-MCOPY="Creative Commons License (BY)" 
-MDESC="codec:$CODEC:quality $QUALITY:width $WIDTH:$FRAMERATE fps"
-MTITLE="$DATUM, Kitchener, ON"
-METADATA="-metadata title='$MTITLE'"
+  opts.on('-i', '--input INPUT', "Input file (required for iphone codec)") do |v|
+    options[:input] = v
+  end
 
-case $CODEC in
-  iphone)
-    PRESET=veryslow
-    # MOVIE=$(basename $INPUT .MTS)-iphone.mp4
-    MOVIE=$(echo "$INPUT" | cut -f 1 -d '.')-iphone.mp4
-    ffmpeg $OPT -i $INPUT \
-         -c:a copy \
-         -preset $PRESET -c:v libx264 \
-         -x264-params ref=4 \
-         -movflags +faststart \
-         -vf "scale=-2:720:flags=lanczos" \
-         -crf $QUALITY $MOVIE
-    ;;
-  x264*)
-    if [ "$TWOPASS" = "1" ]; then
-      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-           -an -preset $PRESET -c:v 264_nvenc \
-           $SIZING \
-           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
-           -b:v $BITRATE -pass 1 -r $FRAMERATE -f mp4 /dev/null
-      MOVIE=$MOVIE-$PRESET-2pass.mp4
-      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-           -an -preset $PRESET -c:v 264_nvenc \
-           $SIZING \
-           -movflags +faststart \
-           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
-           -b:v $BITRATE -pass 2 -r $FRAMERATE $MOVIE
-	  rm ffmpeg2pass*
-    else # single pass
-      MOVIE=$MOVIE-$PRESET.mp4
-      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-           -an -preset $PRESET -c:v 264_nvenc \
-           $SIZING \
-           -movflags +faststart \
-           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
-           -crf $QUALITY -r $FRAMERATE $MOVIE
-    fi
-    ;;
-  vp9)
-    if [ "$TWOPASS" = "1" ]; then
-      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-           -c:v libvpx-vp9 -pass 1 -b:v $BITRATE \
-           $SIZING \
-           -crf $QUALITY -threads $THREADS -speed 4 -tile-columns 6 -frame-parallel 1 -an -f webm /dev/null 
-      MOVIE=$MOVIE-2pass.webm
-      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg -c:v libvpx-vp9 -pass 2 -b:v $BITRATE \
-           $SIZING \
-           -movflags +faststart \
-           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
-           -crf $QUALITY -threads $THREADS -speed 1 -tile-columns 6 -frame-parallel 1 -auto-alt-ref 1 -lag-in-frames 25 -an -r $FRAMERATE -f webm $MOVIE
-      rm ffmpeg2pass-0.log
-    else
-      MOVIE=$MOVIE-1pass.webm
-      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-           $SIZING \
-           -movflags +faststart \
-           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
-           -an -c:v libvpx-vp9 -crf $QUALITY -b:v 0 -r $FRAMERATE $MOVIE
-    fi
-    ;;
-  *nvenc|libsvtav1|libx265)
-    if [ "$TWOPASS" = "1" ]; then
-      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-           -an -c:v $CODEC \
-           $SIZING \
-           -b:v $BITRATE -threads $THREADS -r $FRAMERATE -f mp4 /dev/null
-      MOVIE=$MOVIE-2pass.mp4
-      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-           -an -c:v $CODEC \
-           $SIZING \
-           -movflags +faststart \
-           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
-           -b:v $BITRATE -threads $THREADS -r $FRAMERATE $MOVIE
-    else # single pass
-      MOVIE=$MOVIE-1pass.mp4
-      ffmpeg $OPT -r $FRAMERATE -f image2 -i tl%06d.jpg \
-           $SIZING \
-           -movflags +faststart \
-           -metadata title="$MTITLE" -metadata author="$MAUTHOR" -metadata year="$MYEAR" -metadata copyright="$MCOPY" -metadata description="$MDESC"\
-           -an \
-           -c:v $CODEC -crf $QUALITY -threads $THREADS -r $FRAMERATE $MOVIE
-    fi
-    ;;
-esac
+  opts.on('-w', '--width WIDTH', Integer, "Output width in pixels (default: 1920)") do |v|
+    options[:width] = v
+  end
 
-ELAPSED_TIME=$(($SECONDS - $START_TIME))
-if [ "$VERBOSE" != "0" ]; then
-  echo output $MOVIE
-  echo finished in $(($ELAPSED_TIME/60/60)) hr, $(($ELAPSED_TIME/60%60)) min and $(($ELAPSED_TIME % 60)) sec
-fi
+  opts.on('-q', '--quality QUALITY', Integer, "CRF quality value (default: 20)") do |v|
+    options[:quality] = v
+  end
 
+  opts.on('-b', '--bitrate BITRATE', "Bitrate for ffmpeg (default: 5000k)") do |v|
+    options[:bitrate] = v
+  end
 
+  opts.on('-r', '--framerate FRAMERATE', Integer, "Framerate (default: 24)") do |v|
+    options[:framerate] = v
+  end
+
+  opts.on('-p', '--preset PRESET', "Encoding preset (default: medium)") do |v|
+    options[:preset] = v
+  end
+
+  opts.on('-l', '--log-level LOG_LEVEL', "ffmpeg log level (default: error)") do |v|
+    options[:log_level] = v
+  end
+
+  opts.on('-t', '--threads THREADS', Integer, "Number of threads (default: 4)") do |v|
+    options[:threads] = v
+  end
+
+  opts.on('-2', '--twopass', "Enable two-pass encoding") do
+    options[:twopass] = true
+  end
+
+  opts.on('-v', '--verbose', "Enable verbose output") do
+    options[:verbose] = true
+  end
+
+  opts.on('-d', '--debug', "Enable debug mode") do
+    options[:debug] = true
+  end
+
+  opts.on('-h', '--help', "Show this help message") do
+    print_help_lambda.call(options)
+    exit 0
+  end
+end
+
+option_parser.parse!(ARGV)
+
+def exit_with_error(message)
+  puts message
+  exit 1
+end
+
+# Validate options
+unless VALID_CODECS.include?(options[:codec])
+  exit_with_error("Invalid codec: #{options[:codec]}\nValid codecs: #{VALID_CODECS.join(', ')}")
+end
+
+unless VALID_PRESETS.include?(options[:preset])
+  exit_with_error("Invalid preset: #{options[:preset]}\nValid presets: #{VALID_PRESETS.join(', ')}")
+end
+
+unless VALID_LOG_LEVELS.include?(options[:log_level])
+  exit_with_error("Invalid log level: #{options[:log_level]}\nValid levels: #{VALID_LOG_LEVELS.join(', ')}")
+end
+
+if options[:codec] == 'iphone' && options[:input].nil?
+  exit_with_error("Input file is required for iphone codec (-i INPUT)")
+end
+
+if options[:width] <= 0
+  exit_with_error("Width must be a positive number")
+end
+
+if options[:quality] < 0 || options[:quality] > 51
+  exit_with_error("Quality must be between 0 and 51")
+end
+
+if options[:framerate] <= 0
+  exit_with_error("Framerate must be a positive number")
+end
+
+if options[:threads] <= 0
+  exit_with_error("Threads must be a positive number")
+end
+
+def extract_date(options)
+  if options[:codec] == 'iphone' && options[:input]
+    stat_output = `stat -c"%y" #{options[:input]}`.strip
+    stat_output[0..9]
+  else
+    first_jpg = `ls -1 *.jpg 2>/dev/null | head -n 1`.strip
+    if first_jpg.empty?
+      exit_with_error("No .jpg files found in current directory")
+    end
+    stat_output = `stat -c"%y" #{first_jpg}`.strip
+    stat_output[0..9]
+  end
+end
+
+def extract_date_for_metadata(options)
+  if options[:codec] == 'iphone' && options[:input]
+    stat_output = `stat -c"%y" #{options[:input]}`.strip
+    stat_output.gsub(/(\d{4})-(\d{2})-(\d{2})/, '\3.\2.\1')
+  else
+    first_jpg = `ls -1 *.jpg 2>/dev/null | head -n 1`.strip
+    if first_jpg.empty?
+      return 'Unknown Date'
+    end
+    stat_output = `stat -c"%y" #{first_jpg}`.strip
+    stat_output.gsub(/(\d{4})-(\d{2})-(\d{2})/, '\3.\2.\1')
+  end
+end
+
+def metadata_args(mauthor, myear, mcopy, mdesc, mtitle)
+  "-metadata title='#{mtitle}' -metadata author='#{mauthor}' -metadata year='#{myear}' -metadata copyright='#{mcopy}' -metadata description='#{mdesc}'"
+end
+
+# Extract date from input files
+fdate = extract_date(options)
+datum = extract_date_for_metadata(options)
+
+# Set up encoding variables
+sizing = "-vf scale=#{options[:width]}:-1"
+opt = "-y -v #{options[:log_level]} -hide_banner"
+movie_base = "#{fdate}-#{options[:codec]}-q#{options[:quality]}-b#{options[:bitrate]}-w#{options[:width]}-fr#{options[:framerate]}"
+
+# Metadata
+mauthor = "Steffen Roller <steffen.roller@gmail.com>"
+myear = "(c) by Steffen Roller #{Date.today.year}"
+mcopy = "Creative Commons License (BY)"
+mdesc = "codec:#{options[:codec]}:quality #{options[:quality]}:width #{options[:width]}:#{options[:framerate]} fps"
+mtitle = "#{datum}, Kitchener, ON"
+
+# Display effective parameters if verbose
+if options[:verbose]
+  puts "Effective parameters:"
+  puts "  input file     : #{options[:input] || 'tl%06d.jpg (image sequence)'}"
+  puts "  codec          : #{options[:codec]}"
+  puts "  width          : #{options[:width]}"
+  puts "  log level      : #{options[:log_level]}"
+  puts "  quality (CRF)  : #{options[:quality]}"
+  puts "  bitrate        : #{options[:bitrate]}"
+  puts "  framerate      : #{options[:framerate]} fps"
+  puts "  preset         : #{options[:preset]}"
+  puts "  threads        : #{options[:threads]}"
+  puts "  two pass       : #{options[:twopass] ? 'yes' : 'no'}"
+end
+
+# Run encoding based on codec
+case options[:codec]
+when 'iphone'
+  preset = 'veryslow'
+  movie = "#{options[:input].split('.').first}-iphone.mp4"
+
+  command = <<-CMD
+    ffmpeg #{opt} -i #{options[:input]} \\
+         -c:a copy \\
+         -preset #{preset} -c:v libx264 \\
+         -x264-params ref=4 \\
+         -movflags +faststart \\
+         -vf "scale=-2:720:flags=lanczos" \\
+         -crf #{options[:quality]} \\
+         #{movie}
+  CMD
+
+  puts "Running: #{command.strip}" if options[:debug]
+  system(command)
+
+when 'x264', '264_nvenc'
+  # Determine the correct encoder name
+  encoder = options[:codec] == 'x264' ? 'libx264' : '264_nvenc'
+
+  if options[:twopass]
+    movie = "#{movie_base}-#{options[:preset]}-2pass.mp4"
+    metadata = metadata_args(mauthor, myear, mcopy, mdesc, mtitle)
+
+    # Pass 1
+    pass1 = <<-CMD
+      ffmpeg #{opt} -r #{options[:framerate]} -f image2 -i tl%06d.jpg \\
+           -an -preset #{options[:preset]} -c:v #{encoder} \\
+           #{sizing} \\
+           #{metadata} \\
+           -b:v #{options[:bitrate]} -pass 1 -r #{options[:framerate]} -f mp4 /dev/null
+    CMD
+
+    puts "Running two-pass encoding (pass 1)..." if options[:verbose]
+    system(pass1)
+
+    # Pass 2
+    pass2 = <<-CMD
+      ffmpeg #{opt} -r #{options[:framerate]} -f image2 -i tl%06d.jpg \\
+           -an -preset #{options[:preset]} -c:v #{encoder} \\
+           #{sizing} \\
+           -movflags +faststart \\
+           #{metadata} \\
+           -b:v #{options[:bitrate]} -pass 2 -r #{options[:framerate]} \\
+           #{movie}
+    CMD
+
+    puts "Running two-pass encoding (pass 2)..." if options[:verbose]
+    system(pass2)
+
+    # Cleanup
+    `rm -f ffmpeg2pass*`
+  else
+    movie = "#{movie_base}-#{options[:preset]}.mp4"
+    metadata = metadata_args(mauthor, myear, mcopy, mdesc, mtitle)
+
+    command = <<-CMD
+      ffmpeg #{opt} -r #{options[:framerate]} -f image2 -i tl%06d.jpg \\
+           -an -preset #{options[:preset]} -c:v #{encoder} \\
+           #{sizing} \\
+           -movflags +faststart \\
+           #{metadata} \\
+           -crf #{options[:quality]} -r #{options[:framerate]} \\
+           #{movie}
+    CMD
+
+    system(command)
+  end
+
+when 'vp9'
+  if options[:twopass]
+    movie = "#{movie_base}-2pass.webm"
+    metadata = metadata_args(mauthor, myear, mcopy, mdesc, mtitle)
+
+    # Pass 1
+    pass1 = <<-CMD
+      ffmpeg #{opt} -r #{options[:framerate]} -f image2 -i tl%06d.jpg \\
+           -c:v libvpx-vp9 -pass 1 -b:v #{options[:bitrate]} \\
+           #{sizing} \\
+           -crf #{options[:quality]} -threads #{options[:threads]} -speed 4 -tile-columns 6 -frame-parallel 1 -an -f webm /dev/null
+    CMD
+
+    puts "Running two-pass encoding (pass 1)..." if options[:verbose]
+    system(pass1)
+
+    # Pass 2
+    pass2 = <<-CMD
+      ffmpeg #{opt} -r #{options[:framerate]} -f image2 -i tl%06d.jpg \\
+           -c:v libvpx-vp9 -pass 2 -b:v #{options[:bitrate]} \\
+           #{sizing} \\
+           -movflags +faststart \\
+           #{metadata} \\
+           -crf #{options[:quality]} -threads #{options[:threads]} -speed 1 -tile-columns 6 -frame-parallel 1 -auto-alt-ref 1 -lag-in-frames 25 -an -r #{options[:framerate]} -f webm \\
+           #{movie}
+    CMD
+
+    puts "Running two-pass encoding (pass 2)..." if options[:verbose]
+    system(pass2)
+
+    # Cleanup
+    `rm -f ffmpeg2pass-0.log`
+  else
+    movie = "#{movie_base}-1pass.webm"
+    metadata = metadata_args(mauthor, myear, mcopy, mdesc, mtitle)
+
+    command = <<-CMD
+      ffmpeg #{opt} -r #{options[:framerate]} -f image2 -i tl%06d.jpg \\
+           #{sizing} \\
+           -movflags +faststart \\
+           #{metadata} \\
+           -an -c:v libvpx-vp9 -crf #{options[:quality]} -b:v 0 -r #{options[:framerate]} \\
+           #{movie}
+    CMD
+
+    system(command)
+  end
+
+when 'hevc', 'x265', 'hevc_nvenc', 'av1_nvenc', 'libsvtav1'
+  if options[:twopass]
+    movie = "#{movie_base}-2pass.mp4"
+    metadata = metadata_args(mauthor, myear, mcopy, mdesc, mtitle)
+
+    # Pass 1
+    pass1 = <<-CMD
+      ffmpeg #{opt} -r #{options[:framerate]} -f image2 -i tl%06d.jpg \\
+           -an -c:v #{options[:codec]} \\
+           #{sizing} \\
+           -b:v #{options[:bitrate]} -threads #{options[:threads]} -r #{options[:framerate]} -f mp4 /dev/null
+    CMD
+
+    puts "Running two-pass encoding (pass 1)..." if options[:verbose]
+    system(pass1)
+
+    # Pass 2
+    pass2 = <<-CMD
+      ffmpeg #{opt} -r #{options[:framerate]} -f image2 -i tl%06d.jpg \\
+           -an -c:v #{options[:codec]} \\
+           #{sizing} \\
+           -movflags +faststart \\
+           #{metadata} \\
+           -b:v #{options[:bitrate]} -threads #{options[:threads]} -r #{options[:framerate]} \\
+           #{movie}
+    CMD
+
+    puts "Running two-pass encoding (pass 2)..." if options[:verbose]
+    system(pass2)
+  else
+    movie = "#{movie_base}-1pass.mp4"
+    metadata = metadata_args(mauthor, myear, mcopy, mdesc, mtitle)
+
+    command = <<-CMD
+      ffmpeg #{opt} -r #{options[:framerate]} -f image2 -i tl%06d.jpg \\
+           #{sizing} \\
+           -movflags +faststart \\
+           #{metadata} \\
+           -an \\
+           -c:v #{options[:codec]} -crf #{options[:quality]} -threads #{options[:threads]} -r #{options[:framerate]} \\
+           #{movie}
+    CMD
+
+    system(command)
+  end
+end
