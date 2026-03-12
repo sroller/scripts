@@ -196,17 +196,17 @@ See also: process-tl-dir
   end
 
   def generate_x264_video(movies_dir, rate)
-    run_mkmov("-c x264 -w 1920 -b 3500k -r #{rate}")
+    run_mkmov("-c x264 -w 1920 -q 20 -b 3500k -r #{rate}")
     move_files('*.mp4', "#{movies_dir}/#{current_month}/x264")
   end
 
   def generate_vp9_video(movies_dir, rate)
-    run_mkmov("-c vp9 -w 1920 -b 3500k -2 -r #{rate}")
+    run_mkmov("-c vp9 -w 1920 -q 20 -b 3500k -2 -r #{rate}")
     move_files('*.webm', "#{movies_dir}/#{current_month}/webm")
   end
 
   def generate_hevc_video(movies_dir, rate)
-    run_mkmov("-c hevc -w 1920 -b 3500k -2 -r #{rate}")
+    run_mkmov("-c hevc -w 1920 -q 20 -b 3500k -2 -r #{rate}")
     move_files('*.mp4', "#{movies_dir}/#{current_month}/x265")
   end
 
@@ -232,7 +232,7 @@ See also: process-tl-dir
   end
 
   def current_month
-    File.basename(Dir.pwd)
+    extract_month_from_dirname
   end
 end
 

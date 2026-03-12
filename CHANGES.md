@@ -85,6 +85,24 @@ Creates a movie file named:
 
 Where FDATE is extracted from the first input file's modification date.
 
+---
+
+## 2026-03-12: create-24h-movie updated for mkmov CLI changes
+
+### Summary
+Updated `create-24h-movie` to match the refactored `mkmov` command-line interface.
+
+### Changes
+
+#### Fixed
+- Added explicit `-q 20` quality parameter to x264, vp9, and hevc mkmov calls (mkmov now requires explicit CRF quality values)
+- Fixed `current_month` method to use `extract_month_from_dirname` instead of `File.basename(Dir.pwd)`, ensuring correct month format (e.g., "01-January") for output directory organization
+
+#### CLI changes in mkmov
+- Default framerate changed from 30 to 24 fps
+- Output filename format: `{FDATE}-{CODEC}-q{QUALITY}-b{BITRATE}-w{WIDTH}-fr{FRAMERATE}.mp4/webm`
+- Two-pass flag: `-2` or `--twopass`
+
 ## 2026-03-11: create-24h-movie refactor to Ruby
 
 ### Summary
