@@ -22,7 +22,8 @@ class Create24hMovie < Thor
   map %w[-r --rate] => :rate
   map %w[-v --verbose] => :verbose
   map %w[-t --target-dir] => :target_dir
-  map %w[-h --help] => :help
+  map %w[-h --help] => :create
+  default_command :create
 
   class_option :interval, type: :string,
                           default: ENV['INTERVAL'] || '120',
@@ -39,10 +40,6 @@ class Create24hMovie < Thor
   class_option :help, type: :boolean,
                      default: false,
                      desc: 'Show help for this command'
-
-  def self.banner
-    "create-24h-movie [options] <timelapse-directory>"
-  end
 
   def create(timelapse_dir = nil)
     return print_help if options[:help] || timelapse_dir.nil?
