@@ -1,100 +1,239 @@
-#!/bin/bash
+#!/usr/bin/env ruby
+
+# Create a 24-hour movie from a timelapse directory
+# Usage: create-24h-movie [options] <timelapse-directory>
 #
-# chdir into $1
-# assume it's a timelapse directory
-# process directory with timelapse pictures
-# from tl000001.jpg to tl<maxnum>.jpg
+# Processes timelapse pictures (tl000001.jpg to tl<maxnum>.jpg) and creates:
+# - x264 video (HD 1920x1080, 3500k bitrate)
+# - vp9 video (HD 1920x1080, 3500k bitrate)
+# - x265/hevc video (HD 1920x1080, 3500k bitrate)
+# - x265/hevc video (HD 1920x1080, default quality)
 #
-# create a x265/hevc video fullsize HD in 1920x1080 with quality level 23
-# create a vp9 video sized 640x480 with max bitrate of 500kb for webstreaming
-# move the movie files to ~/movies
-# delete the directory
+# Moves videos to ~/movies/<month>/{x264,webm,x265,hq}
+# Deletes the exif-* directory after processing
 
-# tracing
-# set -x
+require 'thor'
+require 'fileutils'
+require 'pathname'
 
-MOVIES=${MOVIES:-~/movies}
-INTERVAL=${INTERVAL:-120} # in seconds
-LOGLEVEL=${LOGLEVEL:-error}
-RATE=${RATE:-30} # frame rate 25 PAL, 30 NTSC
-VERBOSE=${VERBOSE:-0} 
+class Create24hMovie < Thor
+  desc "create <timelapse_dir>", "Creates movies from a timelapse directory"
+  map %w[-i --interval] => :interval
+  map %w[-r --rate] => :rate
+  map %w[-v --verbose] => :verbose
+  map %w[-t --target-dir] => :target_dir
+  map %w[-h --help] => :help
 
-if [ "$VERBOSE" = "0" ]; then
-  # VERBOSE=1
-  LOGLEVEL=error
-else
-  echo "effective paramaters:"
-  echo "MOVIES=$MOVIES"
-  echo "INTERVAL=$INTERVAL"
-  echo "RATE=$RATE"
-  echo "VERBOSE=$VERBOSE"
-  V="-v"
-fi
+  class_option :interval, type: :string,
+                          default: ENV['INTERVAL'] || '120',
+                          desc: 'Time interval between frames in seconds (default: 120)'
+  class_option :rate, type: :string,
+                      default: ENV['RATE'] || '30',
+                      desc: 'Frame rate (default: 30, use 25 for PAL)'
+  class_option :verbose, type: :boolean,
+                         default: ENV['VERBOSE'] != '0',
+                         desc: 'Enable verbose output'
+  class_option :target_dir, type: :string,
+                            default: '.',
+                            desc: 'Working directory (default: current directory)'
+  class_option :help, type: :boolean,
+                     default: false,
+                     desc: 'Show help for this command'
 
-if [ -z "$1" ]; then
-	echo error: no parameter given!
-	echo need directory to chdir
-	echo exit
-	exit
-fi
+  def self.banner
+    "create-24h-movie [options] <timelapse-directory>"
+  end
 
-if [ ! -d "$1" ]; then
-  echo $(realpath $1) is not a directory or doesn\'t exist
-	echo exit
-	exit
-fi
+  def create(timelapse_dir = nil)
+    return print_help if options[:help] || timelapse_dir.nil?
+    run_create_movie(timelapse_dir)
+  end
 
-# echo change into dir $1
-cd $1
-MONTH=$(date -d "$(basename $(pwd))" +"%m-%B")
-# echo $MONTH
+  def self.exit_on_no_argument_error?
+    false
+  end
 
-# we're called like this
-# find -type d | egrep '.*/2017[[:digit:]]{4}$'|xargs -l create-24h-movie
+  no_commands do
+    def print_help
+      say <<-HELP
+Usage: create-24h-movie [options] <timelapse-directory>
 
-process-tl-dir -i $INTERVAL -v $VERBOSE
+Creates a 24-hour movie from a timelapse directory.
 
-rc=$?
+  Processes timelapse pictures (tl000001.jpg to tl<maxnum>.jpg) and creates:
+    - x264 video (HD 1920x1080, 3500k bitrate)
+    - vp9 video (HD 1920x1080, 3500k bitrate)
+    - x265/hevc video (HD 1920x1080, 3500k bitrate)
+    - x265/hevc video (HD 1920x1080, default quality)
 
-if [ $rc -ne 0 ]; then
-  echo "process-tl-dir returned $rc"
-  echo "$(pwd): couldn't process pictures"
-	exit
-fi
+  Output is organized by month in ~/movies/<month>/{x264,webm,x265,hq}
 
-# find really the latest exif-*
-EXIF=$(find -type d -name 'exif-*' -cmin -10 -printf '%f')
-cd $EXIF
+Options:
+    -i INTERVAL, --interval=INTERVAL
+                              Time interval between frames in seconds (default: 120)
+    -r RATE, --rate=RATE      Frame rate (default: 30, use 25 for PAL)
+    -v, --verbose             Enable verbose output
+    -t TARGET_DIR, --target-dir=TARGET_DIR
+                              Working directory (default: current directory)
+    -h, --help                Show this help message
 
-mkdir -p $MOVIES/$MONTH/small/{webm,hevc}
-#mkmov vp9 -w 640 -q 26 -b 500k -2 -v $LOGLEVEL -r $RATE
-#mv -v *.webm $MOVIES/$MONTH/small/webm
-#mkmov hevc -w 640 -b 500k -2 -v $LOGLEVEL -r $RATE
-#mv -v *.mp4 $MOVIES/$MONTH/small/hevc
+Environment Variables:
+    MOVIES                    Destination directory for movies (default: ~/movies)
+    INTERVAL                  Time interval between frames (default: 120)
+    RATE                      Frame rate (default: 30)
+    VERBOSE                   Enable verbose output (set to non-zero)
 
-# zuerst, geht am schnellsten
-mkmov -c x264 -w 1920 -b 3500k -r $RATE
-mkdir -p $MOVIES/$MONTH/x264
-mv $V *.mp4 $MOVIES/$MONTH/x264
+Examples:
+    create-24h-movie 20240101
+    create-24h-movie 20240101 -v
+    INTERVAL=60 create-24h-movie 20240101
 
-#
-mkmov -c vp9 -w 1920 -b 3500k -2 -r $RATE
-mkdir -p $MOVIES/$MONTH/webm
-mv $V *.webm $MOVIES/$MONTH/webm
+See also: process-tl-dir
+      HELP
+    end
+  end
 
-#
-mkmov -c hevc -w 1920 -b 3500k -2  -r $RATE
-mkdir -p $MOVIES/$MONTH/x265
-mv $V *.mp4 $MOVIES/$MONTH/x265
+  private
 
-#
-mkmov -c hevc -w 1920 -r $RATE
-mkdir -p $MOVIES/$MONTH/hq
-mv $V *.mp4 $MOVIES/$MONTH/hq
+  def run_create_movie(timelapse_dir)
+    interval = options[:interval]
+    rate = options[:rate]
+    verbose = options[:verbose]
+    target_dir = options[:target_dir] || Dir.pwd
+    movies_dir = expand_path(ENV['MOVIES'] || '~/movies')
 
-cd ..
-if [ "$VERBOSE" == "1" ]; then
-  echo remove $EXIF
-fi
-rm -rf $EXIF
+    # Validate and change into target directory
+    return exit_with_error("No directory specified") if timelapse_dir.nil? || timelapse_dir.empty?
 
+    unless Dir.exist?(timelapse_dir)
+      return exit_with_error("#{timelapse_dir} does not exist")
+    end
+
+    Dir.chdir(timelapse_dir) or return exit_with_error("Cannot change to directory")
+
+    # Extract and display month from directory name
+    month = extract_month_from_dirname
+    say "Processing: #{Dir.pwd} (#{month})" if verbose
+
+    # Process the timelapse directory
+    unless process_timelapse(interval, verbose)
+      return exit_with_error("#{Dir.pwd}: couldn't process pictures")
+    end
+
+    # Find the latest exif-* directory (within 10 minutes)
+    exif_dir = find_latest_exif_dir
+    return exit_with_error("No exif-* directory found") if exif_dir.nil? || exif_dir.empty?
+
+    Dir.chdir(exif_dir) or return exit_with_error("Cannot change to exif directory")
+
+    # Create output directories
+    create_output_dirs(month, movies_dir)
+
+    # Generate videos in order of speed (fastest to slowest)
+    say "Generating x264 video..."
+    generate_x264_video(movies_dir, rate)
+
+    say "Generating vp9 video..."
+    generate_vp9_video(movies_dir, rate)
+
+    say "Generating x265/hevc video..."
+    generate_hevc_video(movies_dir, rate)
+
+    say "Generating x265/hevc HQ video..."
+    generate_hevc_hq_video(movies_dir, rate)
+
+    Dir.chdir('..') or return exit_with_error("Cannot exit exif directory")
+    cleanup_exif_dir(exif_dir) if verbose
+
+    say "Done! Videos saved to:"
+    say "  #{movies_dir}/#{month}/x264/"
+    say "  #{movies_dir}/#{month}/webm/"
+    say "  #{movies_dir}/#{month}/x265/"
+    say "  #{movies_dir}/#{month}/hq/"
+
+    0
+  rescue StandardError => e
+    exit_with_error("Error: #{e.message}")
+  end
+
+  def exit_with_error(message)
+    say(message, :color => :red)
+    exit 1
+  end
+
+  def expand_path(path)
+    Pathname.new(path).expand_path.to_s
+  end
+
+  def extract_month_from_dirname
+    basename = File.basename(Dir.pwd)
+    begin
+      DateTime.parse(basename).strftime('%m-%B')
+    rescue StandardError
+      basename
+    end
+  end
+
+  def process_timelapse(interval, verbose)
+    verbose_string = verbose ? '1' : '0'
+    command = "process-tl-dir -i #{interval} -v #{verbose_string}"
+    say "Running: #{command}" if verbose
+    system(command)
+  end
+
+  def find_latest_exif_dir
+    Dir.glob('exif-*')
+       .select { |d| File.directory?(d) && (Time.now - File.mtime(d)).to_i < 600 }
+       .max_by { |d| File.mtime(d) }
+  end
+
+  def create_output_dirs(month, movies_dir)
+    %w[x264 webm x265 hq].each do |codec|
+      output_path = "#{movies_dir}/#{month}/#{codec}"
+      FileUtils.mkdir_p(output_path)
+      say "Created: #{output_path}" if $VERBOSE
+    end
+  end
+
+  def generate_x264_video(movies_dir, rate)
+    run_mkmov("-c x264 -w 1920 -b 3500k -r #{rate}")
+    move_files('*.mp4', "#{movies_dir}/#{current_month}/x264")
+  end
+
+  def generate_vp9_video(movies_dir, rate)
+    run_mkmov("-c vp9 -w 1920 -b 3500k -2 -r #{rate}")
+    move_files('*.webm', "#{movies_dir}/#{current_month}/webm")
+  end
+
+  def generate_hevc_video(movies_dir, rate)
+    run_mkmov("-c hevc -w 1920 -b 3500k -2 -r #{rate}")
+    move_files('*.mp4', "#{movies_dir}/#{current_month}/x265")
+  end
+
+  def generate_hevc_hq_video(movies_dir, rate)
+    run_mkmov("-c hevc -w 1920 -r #{rate}")
+    move_files('*.mp4', "#{movies_dir}/#{current_month}/hq")
+  end
+
+  def run_mkmov(args)
+    system("mkmov #{args}")
+  end
+
+  def move_files(glob_pattern, dest_dir)
+    files = Dir[glob_pattern]
+    if files.any?
+      FileUtils.mv(files, dest_dir)
+    end
+  end
+
+  def cleanup_exif_dir(exif_dir)
+    say("Removing #{exif_dir}")
+    FileUtils.rm_rf(exif_dir)
+  end
+
+  def current_month
+    File.basename(Dir.pwd)
+  end
+end
+
+Create24hMovie.start(ARGV)
