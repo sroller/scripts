@@ -1,4 +1,7 @@
 #!/bin/bash
 
-# process_footage ganymede --remove
-process_footage callisto --remove
+# nice -n 15 process_footage ganymede --remove
+
+# nice -n 15 process_footage phobos --remove
+
+nice -n 15 process_footage callisto --remove

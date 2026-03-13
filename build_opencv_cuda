@@ -5,41 +5,49 @@
 # set -x
 
 source ~/.bashrc
-VERSION=4.11.0
+VERSION=4.13.0
 
-if [ -d ~/Downloads/opencv ]; then
-  echo found existing ~/Downloads/opencv
-  read -p "remove (y/n)? " answer
-  if [ $answer == 'y' ]
-  then
-    rm -rf ~/Downloads/opencv
-  else
-    exit
-  fi
-fi
+echo "building and installing OpenCV and cv2 version $VERSION"
 
 echo make sure CUDA toolkit is installed
-sudo apt install cuda-toolkit
+sudo apt-get -q install cuda-toolkit
 
-cd ~/Downloads && mkdir opencv && cd opencv
-pwd
-wget -O opencv.zip https://github.com/opencv/opencv/archive/refs/tags/$VERSION.zip
-wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/refs/tags/$VERSION.zip
-unzip -q opencv.zip
-unzip -q opencv_contrib.zip
+# CUDO NVcc is incompatible with newer gcc compilers
+sudo apt-get -q install gcc-12 g++-12
 
-echo "Create a virtual environment for the python binding module (OPTIONAL)"
-declare -f mkvirtualenv
-mkvirtualenv opencv
-pip install numpy
+# check whether uv is install and if not install it
+
+if command -v uv >/dev/null 2>&1; then
+  echo "uv version: $(uv --version)"
+else
+  echo "install uv"
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+fi
+
+cd
+mkdir -p cv2-cuda
+cd cv2-cuda
+
+WORKDIR=$(pwd)
+
+uv python install
+uv venv --clear
+source .venv/bin/activate
+uv pip install numpy
+
+
+git clone --branch $VERSION --depth 1 https://github.com/opencv/opencv.git
+git clone --branch $VERSION --depth 1 https://github.com/opencv/opencv_contrib.git
 
 echo "Procced with the installation"
-cd opencv-$VERSION
+cd opencv
 mkdir build
 cd build
 
 cmake -D CMAKE_BUILD_TYPE=RELEASE \
 -D CMAKE_INSTALL_PREFIX=/usr/local \
+-D CMAKE_C_COMPILER=/usr/bin/gcc-12 \
+-D CMAKE_CXX_COMPILER=/usr/bin/g++-12 \
 -D WITH_TBB=ON \
 -D ENABLE_FAST_MATH=1 \
 -D CUDA_FAST_MATH=1 \
@@ -56,9 +64,10 @@ cmake -D CMAKE_BUILD_TYPE=RELEASE \
 -D OPENCV_GENERATE_PKGCONFIG=ON \
 -D OPENCV_PC_FILE_NAME=opencv.pc \
 -D OPENCV_ENABLE_NONFREE=ON \
--D OPENCV_PYTHON3_INSTALL_PATH=~/.virtualenvs/opencv/lib/python3.12/site-packages/ \
--D PYTHON_EXECUTABLE=~/.virtualenvs/opencv/bin/python \
--D OPENCV_EXTRA_MODULES_PATH=~/Downloads/opencv/opencv_contrib-$VERSION/modules \
+-D OPENCV_EXTRA_MODULES_PATH=$WORKDIR/opencv_contrib/modules \
 -D INSTALL_PYTHON_EXAMPLES=OFF \
 -D INSTALL_C_EXAMPLES=OFF \
 -D BUILD_EXAMPLES=OFF ..
+
+# -D OPENCV_PYTHON3_INSTALL_PATH=~/.virtualenvs/opencv/lib/python3.12/site-packages/ \
+# -D PYTHON_EXECUTABLE=~/.virtualenvs/opencv/bin/python \

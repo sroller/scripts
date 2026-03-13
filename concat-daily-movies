@@ -2,6 +2,8 @@
 #
 # compacts all daily movies to one monthly film
 
+SOUND_DIR=/usb_drives/my_book/archive/movies/sounds
+
 if (( $(find -iname '*.webm'|wc -l) > 0 ))
 then
 	EXT='.webm'
@@ -39,7 +41,7 @@ then
   ffmpeg -i $MONTH-month$EXT -i ~timelapse/archive/movies/sound/alles.webm -c copy -shortest $MONTH-sound$EXT
 else
   # assuming mp4
-  ffmpeg -i $MONTH-month$EXT -i ~timelapse/archive/movies/sound/alles.mp3 -c copy -shortest $MONTH-sound$EXT
+  ffmpeg -i $MONTH-month$EXT -i $SOUND_DIR/alles.mp3 -c copy -shortest $MONTH-sound$EXT
 fi
 echo monthly movie in $MONTH-month$EXT
 rm mylist.txt

@@ -27,7 +27,7 @@ while true; do
       echo "  -r, --remove     Delete input directory after processing"
       echo "  --help           Show this help message"
       echo ""
-      echo "Cameras: callisto | ganymede"
+      echo "Cameras: callisto | ganymede | phobos"
       exit 0
       ;;
     --)
@@ -60,15 +60,20 @@ URL="https://rathaus.vineta.ca/movies/$CAPITALIZED_NAME/$DAY.mp4"
 # Camera-specific email subject
 case "$CAMERA_NAME" in
   callisto)
-    EMAIL_SUBJECT="Daily video from the driveway camera"
+    EMAIL_SUBJECT="Daily video from Callisto (driveway)"
     ;;
   ganymede)
-    EMAIL_SUBJECT="Daily video from the back yard camera"
+    EMAIL_SUBJECT="Daily video from Ganymede (backyard)"
+    ;;
+  phobos)
+    EMAIL_SUBJECT="Daily video from Phobos (Pi Zero)"
     ;;
 esac
 
 # Run the processing command
-/barracuda/home/steffenr/.virtualenvs/opencv/bin/python /home/steffenr/src/python_ai/ChatGPT/combine_footage/process_videos.py --input "$INPUT_DIR" --output "$OUTPUT_FILE"
+cd /home/steffenr/src/python_ai/ChatGPT/combine_footage
+uv run python process_videos.py --input "$INPUT_DIR" --output "$OUTPUT_FILE"
+# /barracuda/home/steffenr/.virtualenvs/opencv/bin/python /home/steffenr/src/python_ai/ChatGPT/combine_footage/process_videos.py --input "$INPUT_DIR" --output "$OUTPUT_FILE"
 STATUS=$?
 
 if [ $STATUS -eq 0 ]; then
@@ -83,7 +88,7 @@ if [ $STATUS -eq 0 ]; then
 
   df -h | egrep "(barracuda|seagate)"
   echo "view/download from $URL"
-  mailx -s "$EMAIL_SUBJECT" steffen.roller@gmail.com,sroller@opentext.com <<EOM
+  mailx -s "$EMAIL_SUBJECT" steffen.roller@gmail.com <<EOM
 view/download from $URL
 EOM
 

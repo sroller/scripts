@@ -2,7 +2,9 @@
 
 # tmux new -d -s "update-all"
 
-MACHINES="europa.local io.local ganymede.local callisto.local titan.local phobos.local pi-hole.local"
+#set -x 
+
+MACHINES="europa.local io.local ganymede.local callisto.local titan.local phobos.local deimos.local pihole.local"
 DEAD=0
 
 # all machines alive?
@@ -13,6 +15,7 @@ do
   then
     echo "$node is alive"
   else
+    echo "$node is dead"
     DEAD=1
   fi
 done
@@ -22,11 +25,14 @@ then
   read -p "Do you want to continue anyway? (y/n)" yn
   case $yn in
     [Yy]* ) echo "Let's go then"
-            break;;
+            # break;;
+            ;;
     [Nn]* ) echo "Go fix your stuff and try again"
             exit;;
   esac
 fi
+
+LC_ALL=C
 
 for node in $MACHINES
 do
@@ -44,4 +50,4 @@ done
 echo '************************************'
 echo "         pihole -up"
 echo '************************************'
-ssh steffenr@pi-hole.local "sudo pihole -up"
+ssh steffenr@pihole.local "sudo pihole -up"
