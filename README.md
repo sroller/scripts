@@ -231,7 +231,38 @@ update-all-machines
 ### `record`, `record-movie`
 **Bash scripts** - Recording utilities.
 
-### `network_monitor2`, `network_report`, `network_speed`
+### `network_monitor2`
+**Bash script** - Network monitoring service for systemd.
+
+**Features:**
+- Monitors connection to TekSavvy gateway (mysavvy.teksavvy.com)
+- Logs outages to `/var/log/network_monitor/`
+- Alerts all terminals via `wall` for outages > 60 seconds
+- Runs as a systemd service
+
+**Usage:**
+```bash
+# Install service
+sudo ln -sf /home/steffenr/scripts/network_monitor2.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable network_monitor2
+sudo systemctl start network_monitor2
+
+# View logs
+sudo journalctl -u network_monitor2 -f
+```
+
+### `network_monitor_daily_report`
+**Bash script** - Daily outage report with timeline.
+
+**Usage:**
+```bash
+./network_monitor_daily_report.sh <email_address>
+```
+
+**Cron job:** Runs daily at 8 AM, emails summary if outages occurred.
+
+### `network_report`, `network_speed`
 **Bash scripts** - Network monitoring and reporting.
 
 ### `health-check`

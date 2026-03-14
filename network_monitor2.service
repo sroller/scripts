@@ -1,0 +1,21 @@
+[Unit]
+Description=Network Monitor Service
+After=network.target network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/steffenr/scripts/network_monitor2
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Run as a specific user (change to your username if different)
+User=steffenr
+Group=steffenr
+
+# Allow wall messages to be sent
+Environment="DISPLAY=:0"
+
+[Install]
+WantedBy=multi-user.target
