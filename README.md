@@ -216,9 +216,6 @@ update-all-machines
 ### `x264`
 **Bash script** - x264 video encoding wrapper.
 
-### `create-hevc`, `create-vp9`, `create-x264`
-**Bash scripts** - Codec-specific video creation wrappers.
-
 ### `create-monthly-movie`
 **Bash script** - Creates monthly movie from daily movies.
 
@@ -234,7 +231,7 @@ update-all-machines
 ### `record`, `record-movie`
 **Bash scripts** - Recording utilities.
 
-### `network_monitor`, `network_monitor2`, `network_report`, `network_speed`
+### `network_monitor2`, `network_report`, `network_speed`
 **Bash scripts** - Network monitoring and reporting.
 
 ### `health-check`
